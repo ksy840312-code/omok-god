@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>오목의 신</title>
+<meta name="author" content="인제고 수학 교사 김수영">
+<!-- 오픈소스 고지: 오목 엔진 Rapfi (https://github.com/dhbloo/rapfi, GPL-3.0) 사용 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;900&family=Gothic+A1:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12100e; --bg2:#1b1815; --bg3:#26221d; --line:#3a3228; --hair:rgba(201,164,92,.32);
+    --ink:#ece3d0; --muted:#a1978a;
+    --gold:#c9a45c; --gold2:#e6c98a; --gold-ink:#1a140a;
+    --seal:#b8322a; --seal2:#d4483d;
+    --good:#7fb89a; --bad:#e0705f; --warn:#d9a05b; --blue:#8fb4e8;
+    --display:"Noto Serif KR",serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Gothic A1",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+  body{min-height:100vh;background:
+    radial-gradient(80% 420px at 85% -60px,rgba(184,50,42,.16),transparent 70%) no-repeat,
+    radial-gradient(70% 520px at 0% 0%,rgba(201,164,92,.10),transparent 70%) no-repeat,var(--bg)}
+  .wrap{max-width:520px;margin:0 auto;padding:18px 16px 48px}
+  h1{font-family:var(--display);font-weight:900;font-size:44px;letter-spacing:-1px;line-height:1.05;margin:0}
+  h2{font-family:var(--display);font-weight:900;font-size:21px;margin:0 0 12px;letter-spacing:-.3px}
+  .sub{color:var(--muted);font-size:14px;line-height:1.65;margin:10px 0 16px}
+  button,input{font-family:inherit}
+  button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--gold2);outline-offset:2px}
+
+  /* 패널: 옻칠 판에 금박 실선 */
+  .card,.mode,.player{position:relative;background:linear-gradient(180deg,#1e1a16,#181512);border:1px solid var(--line);border-radius:6px;padding:18px;margin-bottom:14px}
+  .card:before,.mode:before,.player:before{content:"";position:absolute;inset:4px;border:1px solid var(--hair);border-radius:3px;pointer-events:none}
+  .card.flat{background:transparent}
+  .reward{position:relative;background:rgba(201,164,92,.07);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:12px 14px 12px 50px;margin-bottom:14px;font-size:13.5px;line-height:1.6;color:#d8ccb4}
+  .reward b{color:var(--gold2);font-weight:800;font-size:14.5px}
+  .reward svg{position:absolute;left:14px;top:13px}
+
+  /* 히어로: 낙관 + 붓글씨 제목 */
+  .hero{position:relative;margin:6px 0 18px;padding-top:4px}
+  .hero-mark{position:absolute;right:-6px;top:-18px;font-family:var(--display);font-weight:900;font-size:200px;line-height:1;color:rgba(236,227,208,.045);pointer-events:none;user-select:none}
+  .hero-row{display:flex;align-items:flex-start;gap:14px}
+  .seal{flex:none;width:58px;height:58px;margin-top:4px;background:var(--seal);color:#f6e6dc;border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:900;font-size:34px;line-height:1;box-shadow:inset 0 0 0 3px var(--seal),inset 0 0 0 4.5px rgba(246,230,220,.75);transform:rotate(-4deg)}
+  .hero-kicker{font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:6px;color:var(--gold);margin:2px 0 6px}
+  .hero svg{display:block;width:100%;height:auto;border-radius:4px;margin-top:16px;box-shadow:0 0 0 1px #000,0 0 0 4px #2a2016,0 0 0 5px var(--hair),0 18px 40px rgba(0,0,0,.55)}
+  .hero-text{margin-top:0}
+
+  /* 선수 등록 */
+  .player{background:linear-gradient(180deg,#221c17,#191512)}
+  .player:after{content:"棋";position:absolute;right:14px;top:6px;font-family:var(--display);font-weight:900;font-size:64px;color:rgba(201,164,92,.10)}
+  .player h2,.player .row{position:relative;z-index:1}
+  label.f{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin:0 0 6px}
+  input[type=text],input[type=password]{width:100%;font-size:17px;font-weight:700;padding:12px 13px;border:1px solid var(--line);border-bottom:2px solid var(--gold);border-radius:4px;background:rgba(0,0,0,.35);color:var(--ink)}
+  input[type=text]::placeholder{color:#6f665b;font-weight:500}
+  input.err{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad) inset}
+  .err-msg{font-size:13px;color:var(--bad);margin-top:8px;font-weight:700;position:relative;z-index:1}
+  .err-msg:empty{display:none}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.55;position:relative;z-index:1}
+
+  /* 토글 */
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{flex:1;min-width:64px;font-size:15px;font-weight:700;padding:11px 8px;border-radius:4px;border:1px solid var(--line);background:rgba(0,0,0,.25);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:background .15s,color .15s,border-color .15s}
+  .seg button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .mini{width:14px;height:14px;border-radius:50%;flex:none;box-shadow:inset 0 -2px 3px rgba(0,0,0,.35)}
+  .mini.w{background:radial-gradient(circle at 35% 30%,#fff,#c9c4b8)}
+  .mini.g{background:radial-gradient(circle at 35% 30%,#bbb,#6a6a6a)}
+  .mini.b{background:radial-gradient(circle at 35% 30%,#666,#000);box-shadow:0 0 0 1px rgba(255,255,255,.25)}
+
+  /* 모드 탭 */
+  .modetabs{display:flex;margin:6px 0 14px;border:1px solid var(--line);border-radius:6px;background:rgba(10,8,6,.85);position:sticky;top:8px;z-index:5;backdrop-filter:blur(6px);overflow:hidden}
+  .modetabs button{flex:1;display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:10px;align-items:center;text-align:left;padding:12px;border:0;background:transparent;color:var(--muted);cursor:pointer;position:relative;transition:background .18s,color .18s}
+  .modetabs button + button{border-left:1px solid var(--line)}
+  .modetabs button:after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:transparent}
+  .modetabs .mt-ico{grid-row:1 / span 2;display:flex;width:36px;height:36px;border-radius:4px;align-items:center;justify-content:center;background:var(--bg3);color:var(--muted)}
+  .modetabs .mt-t{font-family:var(--display);font-weight:900;font-size:17px;line-height:1.2;color:var(--muted)}
+  .modetabs .mt-d{font-size:11.5px;font-weight:700;line-height:1.3;margin-top:2px}
+  .modetabs button.on{background:var(--bg2)}
+  .modetabs button.on .mt-t{color:var(--ink)}
+  #tab-measure.on:after{background:var(--seal)}
+  #tab-practice.on:after{background:var(--gold)}
+  #tab-measure.on .mt-ico{background:var(--seal);color:#f6e6dc}
+  #tab-practice.on .mt-ico{background:var(--gold);color:var(--gold-ink)}
+  .modetabs button.on .mt-d{color:var(--gold2)}
+
+  /* 모드 패널 */
+  .mode{padding:20px 18px}
+  .mode.main{background:linear-gradient(180deg,#241a16,#181512 60%)}
+  .mode-h{display:flex;align-items:center;justify-content:space-between;gap:10px;position:relative}
+  .mode-h h2{margin:0;font-size:26px}
+  .tag{font-size:12px;font-weight:700;border-radius:3px;padding:5px 9px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+  .mode.main .tag{border-color:rgba(184,50,42,.6);color:#f0b3aa;background:rgba(184,50,42,.12)}
+  .mode-desc{font-size:13.5px;color:var(--muted);line-height:1.6;margin:8px 0 4px;position:relative}
+  .opt{margin:18px 0 0;position:relative}
+
+  /* 돌 사다리 */
+  .ladder{position:relative;display:flex;justify-content:space-between;align-items:flex-end;padding:12px 4px 0;margin-top:2px}
+  .ladder:before{content:"";position:absolute;left:18px;right:18px;bottom:21px;height:1px;background:var(--gold);opacity:.55}
+  .ladder button{position:relative;z-index:1;background:none;border:0;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--muted);font-weight:800;font-size:12px}
+  .ladder .stone{width:var(--sz);height:var(--sz);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:900;font-size:calc(var(--sz) * .44);color:var(--tx);background:radial-gradient(circle at 34% 28%,var(--hi),var(--lo));box-shadow:0 3px 6px rgba(0,0,0,.6),inset 0 -3px 5px rgba(0,0,0,.25);transition:transform .18s cubic-bezier(.3,1.6,.6,1),box-shadow .18s}
+  .ladder button.on .stone{transform:translateY(-6px) scale(1.04);box-shadow:0 0 0 2px var(--bg2),0 0 0 4px var(--seal2),0 10px 18px rgba(0,0,0,.6)}
+  .ladder button.on{color:var(--gold2)}
+  .lv-info{display:flex;align-items:center;gap:14px;margin-top:16px;padding:14px;border-radius:4px;background:rgba(0,0,0,.3);border:1px solid var(--line)}
+  .lv-info .lv-big{font-family:var(--display);font-weight:900;font-size:40px;line-height:1;color:var(--gold2);min-width:44px;text-align:center}
+  .lv-info .lv-name{font-weight:800;font-size:16px}
+  .lv-info .lv-desc{font-size:13px;color:var(--muted);line-height:1.5;margin-top:2px}
+  .lv-bar{height:4px;background:#0b0a08;margin-top:9px;overflow:hidden}
+  .lv-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--seal2));transition:width .25s}
+
+  /* 버튼 */
+  .btn{display:block;width:100%;font-family:var(--display);font-weight:900;font-size:19px;letter-spacing:1px;padding:14px;border-radius:4px;border:0;background:var(--seal);color:#fbeee6;cursor:pointer;text-align:center;text-decoration:none;margin-top:20px;position:relative;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12),0 6px 16px rgba(184,50,42,.25);transition:transform .08s,filter .15s}
+  .btn:active{transform:scale(.98)}
+  .btn.dark{background:var(--gold);color:var(--gold-ink);box-shadow:inset 0 0 0 1px rgba(255,255,255,.2),0 6px 16px rgba(201,164,92,.2)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-family:"Gothic A1",sans-serif;font-weight:700;font-size:15px;letter-spacing:0;padding:12px;box-shadow:none}
+  .btn.small{font-size:16px;padding:12px}
+  .btn:disabled{opacity:.3;cursor:default;transform:none}
+  .row{display:flex;gap:8px}
+  .row > *{flex:1}
+  .row .btn{margin-top:0}
+  .hidden{display:none!important}
+
+  .bar{height:6px;background:var(--bg3);overflow:hidden;margin:18px 0 10px}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--seal2));transition:width .2s}
+  .banner{display:flex;align-items:center;gap:10px;justify-content:space-between;background:rgba(184,50,42,.12);border:1px solid rgba(184,50,42,.55);border-radius:4px;padding:11px 13px;margin-bottom:14px;font-size:14px;font-weight:700}
+  .banner a{white-space:nowrap;color:#fbeee6;background:var(--seal);padding:8px 13px;border-radius:3px;text-decoration:none;font-weight:800;font-size:14px}
+
+  /* 대국 */
+  .gtop{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:6px}
+  .gtitle{font-family:var(--display);font-weight:900;font-size:24px}
+  .pill{font-size:13px;font-weight:700;border:1px solid var(--line);border-radius:3px;padding:6px 10px;white-space:nowrap;color:var(--ink);background:rgba(0,0,0,.3)}
+  .pill.timer{font-variant-numeric:tabular-nums;color:var(--gold2);border-color:rgba(201,164,92,.5)}
+  .pill.timer.low{background:var(--seal);color:#fff;border-color:var(--seal);animation:pulse 1s infinite}
+  @keyframes pulse{50%{transform:scale(1.06)}}
+  .players{display:flex;gap:8px;margin-bottom:10px}
+  .pl{flex:1;display:flex;align-items:center;gap:9px;background:var(--bg2);border:1px solid var(--line);border-radius:4px;padding:10px 12px;font-size:14.5px;font-weight:700;min-width:0;transition:border-color .2s,box-shadow .2s}
+  .pl span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pl.turn{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset,0 0 18px rgba(201,164,92,.15)}
+  .st{width:18px;height:18px;border-radius:50%;flex:none}
+  .st.b{background:radial-gradient(circle at 35% 30%,#666,#000);box-shadow:0 0 0 1px rgba(255,255,255,.3)}
+  .st.w{background:radial-gradient(circle at 35% 30%,#fff,#c9c4b8)}
+  .boardbox{position:relative;width:100%;aspect-ratio:1/1;border-radius:3px;overflow:hidden;box-shadow:0 0 0 1px #000,0 0 0 6px #2a2016,0 0 0 7px var(--hair),0 22px 46px rgba(0,0,0,.6);margin:8px 0}
+  canvas.board{width:100%;height:100%;display:block;touch-action:manipulation}
+  .status{min-height:46px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:15.5px;margin:12px 0 8px;line-height:1.4}
+  .status b{color:var(--gold2)}
+  .thinking:after{content:"";display:inline-block;width:1.2em;text-align:left;animation:dots 1.2s steps(4) infinite}
+  @keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+  .confirm-row{display:flex;gap:8px;align-items:stretch}
+  .confirm-row .btn{flex:1;margin-top:0}
+  .confirm-row .btn.ghost{flex:0 0 86px}
+  #btn-place{font-size:24px;padding:13px;letter-spacing:6px}
+
+  /* 모달 */
+  .modal{position:fixed;inset:0;background:rgba(5,4,3,.75);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:18px;z-index:10}
+  .modal .card{max-width:420px;width:100%;margin:0;max-height:92vh;overflow:auto}
+  .modal .btn{margin-top:10px}
+  .modal .row{margin-top:10px}
+  .m-title{font-family:var(--display);font-weight:900;font-size:26px;margin-bottom:8px;position:relative}
+  .idbox{font-family:var(--display);font-weight:900;font-size:30px;text-align:center;padding:16px;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:4px;margin:6px 0 10px;letter-spacing:1px;position:relative}
+
+  /* 결과 */
+  .score-card{position:relative;text-align:center;padding:28px 18px 24px;border-radius:6px;background:radial-gradient(90% 90% at 50% 0%,#33231b 0%,#181512 70%);border:1px solid var(--line);margin-bottom:14px;overflow:hidden}
+  .score-card:before{content:"";position:absolute;inset:5px;border:1px solid var(--hair);border-radius:3px;pointer-events:none}
+  .score-card:after{content:"神";position:absolute;right:-10px;bottom:-40px;font-family:var(--display);font-weight:900;font-size:180px;color:rgba(184,50,42,.12);pointer-events:none}
+  .big{position:relative;font-family:var(--display);font-weight:900;font-size:88px;line-height:1;margin:12px 0 14px;color:var(--gold2);text-shadow:0 6px 30px rgba(201,164,92,.25)}
+  .tier{position:relative;display:inline-block;font-family:var(--display);font-weight:900;font-size:20px;background:var(--ink);color:var(--bg);border-radius:3px;padding:6px 18px;letter-spacing:2px}
+  table{width:100%;border-collapse:collapse;font-size:14px;position:relative}
+  th,td{padding:10px 3px;border-bottom:1px solid var(--line);text-align:center}
+  th{color:var(--muted);font-weight:700;font-size:12px}
+  tr.click{cursor:pointer}
+  tr.click:active{background:var(--bg3)}
+  .win{color:var(--good);font-weight:800}.loss{color:var(--bad);font-weight:800}
+  .kv{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px;position:relative}
+  .kv:last-child{border-bottom:0}
+  .kv b{font-weight:800}
+  .muted{color:var(--muted)}
+  .foot{font-size:12px;color:var(--muted);line-height:1.7;margin-top:18px;position:relative}
+  .foot a{color:var(--muted)}
+  .credit{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);text-align:center;font-family:var(--display);font-weight:600;font-size:13px;color:var(--gold);letter-spacing:.5px}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-weight:800;padding:11px 18px;border-radius:4px;font-size:14px;z-index:20;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  .toast.show{opacity:1}
+  .sw{list-style:none;padding:0;margin:0;position:relative}
+  .sw li{position:relative;padding:9px 0 9px 30px;font-size:14.5px;line-height:1.55;border-bottom:1px solid var(--line)}
+  .sw li:last-child{border-bottom:0}
+  .sw li:before{position:absolute;left:0;top:10px;width:20px;height:20px;border-radius:3px;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .sw.s li:before{content:"+";background:var(--good);color:#0c1f15}
+  .sw.t li:before{content:"→";background:var(--gold);color:var(--gold-ink)}
+  .summary{font-size:14.5px;line-height:1.75;margin:0;position:relative}
+  .chartbox{position:relative;height:130px;margin:2px 0 0}
+  .chartbox canvas{width:100%;height:100%;display:block;cursor:pointer}
+  .chip.g{border-color:var(--good);color:var(--good)}
+  .sw.w li:before{content:"!";background:var(--seal);color:#fbeee6}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;position:relative}
+  .chip{font-size:13px;font-weight:700;border-radius:3px;padding:7px 10px;border:1px solid var(--line);background:rgba(0,0,0,.3);color:var(--ink);cursor:pointer}
+  .chip.b{border-color:var(--bad);color:var(--bad)}
+  .chip.m{border-color:var(--warn);color:var(--warn)}
+  .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  .nav{display:flex;gap:6px;margin:12px 0 10px;position:relative}
+  .nav button{flex:1;font-size:16px;padding:11px 0;border-radius:4px;border:1px solid var(--line);background:rgba(0,0,0,.3);color:var(--ink);cursor:pointer}
+  .rv-note{position:relative;min-height:50px;font-size:14px;line-height:1.55;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:4px;padding:11px 13px}
+  .rv-note b{color:var(--gold2)}
+  .why{position:relative;margin-top:8px;padding:9px 11px 9px 13px;border-radius:3px;background:rgba(255,255,255,.035);font-size:14px;line-height:1.6}
+  .why:before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;background:var(--good)}
+  .why.bad:before{background:var(--seal2)}
+  .pvbtns{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .pvbtns button{flex:1;min-width:120px;font-size:13px;font-weight:700;padding:9px 8px;border-radius:3px;border:1px dashed rgba(201,164,92,.6);background:transparent;color:var(--gold2);cursor:pointer}
+  .pvbtns button.on{background:var(--gold);color:var(--gold-ink);border-style:solid}
+  .hist{font-size:14px;position:relative}
+  .hist div{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)}
+  .hist div:last-child{border-bottom:0}
+  .hist b{font-family:var(--display);font-weight:900;font-size:17px;color:var(--gold2)}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ═════ 시작 ═════ -->
+  <section id="scr-start">
+    <div class="hero">
+      <div class="hero-mark" aria-hidden="true">神</div>
+      <div class="hero-row">
+        <div class="seal" aria-hidden="true">神</div>
+        <div class="hero-text">
+          <div class="hero-kicker">五目 · 棋力 測定</div>
+          <h1>오목의 신</h1>
+        </div>
+      </div>
+      <p class="sub">AI와 렌주룰로 겨루면 한 수 한 수를 분석해 당신의 기력을 점수로 매깁니다.</p>
+      <svg viewBox="0 18 360 114" role="img" aria-label="오목판 위에 다섯 개가 이어진 흑돌">
+        <defs>
+          <linearGradient id="hw" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9b077"/><stop offset="1" stop-color="#a8733a"/></linearGradient>
+          <radialGradient id="hb" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#6a6a6a"/><stop offset="1" stop-color="#000"/></radialGradient>
+          <radialGradient id="hwst" cx=".35" cy=".3" r=".75"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9c4b8"/></radialGradient>
+          <pattern id="hg" width="24" height="24" patternUnits="userSpaceOnUse" x="12" y="3"><path d="M24 0V24M0 24H24" stroke="#3d2810" stroke-opacity=".6" stroke-width="1" fill="none"/></pattern>
+        </defs>
+        <rect width="360" height="150" fill="url(#hw)"/>
+        <rect width="360" height="150" fill="url(#hg)"/>
+        <circle cx="60" cy="123" r="10.5" fill="url(#hwst)"/><circle cx="108" cy="27" r="10.5" fill="url(#hwst)"/>
+        <circle cx="252" cy="123" r="10.5" fill="url(#hwst)"/><circle cx="300" cy="51" r="10.5" fill="url(#hwst)"/>
+        <circle cx="156" cy="123" r="10.5" fill="url(#hwst)"/><circle cx="276" cy="99" r="10.5" fill="url(#hwst)"/>
+        <circle cx="84" cy="99" r="10.5" fill="url(#hb)"/><circle cx="132" cy="99" r="10.5" fill="url(#hb)"/>
+        <circle cx="132" cy="75" r="10.5" fill="url(#hb)"/><circle cx="156" cy="75" r="10.5" fill="url(#hb)"/><circle cx="180" cy="75" r="10.5" fill="url(#hb)"/><circle cx="204" cy="75" r="10.5" fill="url(#hb)"/><circle cx="228" cy="75" r="10.5" fill="url(#hb)"/>
+        <line x1="120" y1="75" x2="240" y2="75" stroke="#b8322a" stroke-width="2" stroke-linecap="round" opacity=".9"/>
+        <g fill="none" stroke="#b8322a" stroke-width="2"><circle cx="132" cy="75" r="13"/><circle cx="228" cy="75" r="13"/></g>
+      </svg>
+    </div>
+
+    <div class="modetabs" role="tablist" aria-label="모드 선택">
+      <button role="tab" id="tab-measure" class="on" aria-selected="true" data-m="measure">
+        <span class="mt-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" fill="currentColor"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" stroke="currentColor" stroke-width="1.8"/><path d="M10 13.5h4l.6 3.5H9.4l.6-3.5ZM8 18h8v2H8z" fill="currentColor"/></svg></span>
+        <span class="mt-t">기력 측정</span><span class="mt-d">점수와 등급</span>
+      </button>
+      <button role="tab" id="tab-practice" aria-selected="false" data-m="practice">
+        <span class="mt-ico"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="10" r="5.5" fill="currentColor"/><circle cx="15.5" cy="15" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/></svg></span>
+        <span class="mt-t">연습 대국</span><span class="mt-d">시간 무제한</span>
+      </button>
+    </div>
+
+    <div class="banner hidden" id="pending-banner"><span id="pending-text"></span><a id="pending-link" target="_blank" rel="noopener">제출하기</a></div>
+
+    <div class="player">
+      <h2>선수 등록</h2>
+      <div class="row">
+        <div style="flex:0 0 42%"><label class="f" for="sid">학번</label><input id="sid" type="text" inputmode="numeric" maxlength="6" placeholder="10101" autocomplete="off"></div>
+        <div><label class="f" for="name">이름</label><input id="name" type="text" maxlength="10" placeholder="홍길동" autocomplete="off"></div>
+      </div>
+      <div class="err-msg" id="id-err"></div>
+      <div id="pw-wrap" style="margin-top:12px;position:relative;z-index:1"><label class="f" for="pw">참가 비밀번호</label><input id="pw" type="password" maxlength="30" placeholder="선생님께 받은 비밀번호" autocomplete="off"></div>
+      <div class="hint">등록된 학생만 참가할 수 있어요. 기록이 이 학번·이름으로 저장되니 정확히 입력하세요.</div>
+    </div>
+
+    <div class="mode main" id="mode-measure">
+      <div class="mode-h"><h2>기력 측정</h2><span class="tag">여러 번 측정 가능 · 한 수 <span class="t-sec">30</span>초</span></div>
+      <p class="mode-desc">이기면 상대가 강해지고, 지면 약해져요. 마지막 판이 끝나면 점수와 등급이 나와요.</p>
+      <div class="reward" style="margin:12px 0 0">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" fill="#f2c14e"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" stroke="#f2c14e" stroke-width="1.8"/><path d="M10 13.5h4l.6 3.5H9.4l.6-3.5ZM8 18h8v2H8z" fill="#ffdc85"/></svg>
+      <b>점수가 높을수록 그에 걸맞은 보상이 있을 예정이에요.</b><br>측정은 <b style="font-size:inherit">몇 번이든</b> 다시 할 수 있어요. <b style="font-size:inherit">행사 전날까지 측정한 모든 기록의 평균 기력</b>으로 행사를 진행해요.
+    </div>
+      <div class="opt"><label class="f">대국 수</label>
+        <div class="seg" id="seg-n">
+          <button data-v="3" class="on">3판</button>
+          <button data-v="4">4판</button>
+          <button data-v="5">5판</button>
+        </div></div>
+      <div class="opt"><label class="f">첫 판 상대</label>
+        <div class="seg" id="seg-start">
+          <button data-v="2"><span class="mini w"></span>쉬움</button>
+          <button data-v="3" class="on"><span class="mini g"></span>보통</button>
+          <button data-v="5"><span class="mini b"></span>어려움</button>
+        </div></div>
+      <button class="btn" id="btn-measure">측정 시작</button>
+    </div>
+
+    <div class="mode practice hidden" id="mode-practice">
+      <div class="mode-h"><h2>연습 대국</h2><span class="tag">시간 무제한</span></div>
+      <p class="mode-desc">원하는 상대를 골라 마음껏 연습하세요. 연습 기록도 저장돼요.</p>
+      <div class="opt"><label class="f">상대 고르기</label>
+        <div class="ladder" id="seg-plevel"></div>
+        <div class="lv-info">
+          <div class="lv-big" id="lv-big">3</div>
+          <div style="flex:1">
+            <div class="lv-name" id="lv-name">중급</div>
+            <div class="lv-desc" id="plevel-hint"></div>
+            <div class="lv-bar"><i id="lv-bar"></i></div>
+          </div>
+        </div></div>
+      <div class="opt"><label class="f">내 돌</label>
+        <div class="seg" id="seg-pcolor">
+          <button data-v="b" class="on"><span class="mini b"></span>흑 · 먼저 둠</button>
+          <button data-v="w"><span class="mini w"></span>백 · 나중에 둠</button>
+        </div></div>
+      <button class="btn dark" id="btn-practice">연습 시작</button>
+    </div>
+
+    <div class="card hidden" id="hist-card">
+      <h2>이 기기의 측정 기록</h2>
+      <div class="hist" id="hist"></div>
+    </div>
+
+    <div class="foot">
+      점수는 AI 분석을 바탕으로 한 추정치이며 공인 급·단이 아닙니다.<br>
+      처음 한 번만 약 22MB를 내려받고, 이후에는 기기에 저장된 파일을 씁니다.
+    </div>
+    <div class="credit">© 2026 제작: 인제고 수학 교사 김수영</div>
+  </section>
+
+  <!-- ═════ 로딩 ═════ -->
+  <section id="scr-load" class="hidden">
+    <h1>AI 준비 중</h1>
+    <div style="height:30vh"></div><p class="sub" id="load-msg">엔진과 신경망을 내려받고 있어요.</p>
+    <div class="bar"><i id="load-bar"></i></div>
+    <div class="muted" id="load-pct" style="font-size:13px">0%</div>
+    <div class="credit">© 2026 제작: 인제고 수학 교사 김수영</div>
+  </section>
+
+  <!-- ═════ 대국 ═════ -->
+  <section id="scr-game" class="hidden">
+    <div class="gtop">
+      <div class="gtitle" id="g-title">측정 1 / 3판</div>
+      <div class="row" style="flex:0 0 auto;gap:6px">
+        <div class="pill timer hidden" id="g-timer">30</div>
+        <div class="pill" id="g-level">상대 3단계</div>
+      </div>
+    </div>
+    <div class="players">
+      <div class="pl" id="pl-user"><span class="st b" id="pl-user-st"></span><span id="pl-user-name">나</span></div>
+      <div class="pl" id="pl-ai"><span class="st w" id="pl-ai-st"></span><span>AI</span></div>
+    </div>
+    <div class="boardbox"><canvas class="board" id="board"></canvas></div>
+    <div class="status" id="status">준비</div>
+    <div class="confirm-row">
+      <button class="btn ghost" id="btn-resign">기권</button>
+      <button class="btn" id="btn-place" disabled>착수</button>
+    </div>
+    <div class="hint" style="text-align:center">판에서 자리를 고르고 <b>착수</b> 버튼을 누르세요. 다른 자리를 누르면 다시 고를 수 있어요.</div>
+    <div class="credit">© 2026 제작: 인제고 수학 교사 김수영</div>
+  </section>
+
+  <!-- ═════ 대국 분석 ═════ -->
+  <section id="scr-review" class="hidden">
+    <div class="gtop">
+      <div class="gtitle" id="rv-title">대국 분석</div>
+      <div class="pill" id="rv-res">-</div>
+    </div>
+    <div class="card">
+      <h2>총평</h2>
+      <div class="chartbox"><canvas id="wr-chart"></canvas></div>
+      <div class="hint" style="margin:4px 0 10px">내 승률 흐름 · <span style="color:#d4483d">●</span> 악수 <span style="color:#d9a05b">●</span> 실수 <span style="color:#7fb89a">●</span> 좋은 수 · 그래프를 누르면 그 수로 이동해요</div>
+      <p class="summary" id="rv-summary"></p>
+    </div>
+    <div class="card">
+      <div class="kv"><span>정확도</span><b id="rv-acc">-</b></div>
+      <div class="kv"><span>AI 최선수와 같은 수</span><b id="rv-match">-</b></div>
+      <div class="kv"><span>악수 / 실수 / 아쉬운 수</span><b id="rv-mist">-</b></div>
+      <div class="kv"><span>초반 / 중반 / 종반 정확도</span><b id="rv-phase">-</b></div>
+      <div class="kv"><span>평균 생각 시간</span><b id="rv-time">-</b></div>
+    </div>
+    <div class="card"><h2>강점</h2><ul class="sw s" id="rv-str"></ul></div>
+    <div class="card"><h2>보완할 점</h2><ul class="sw w" id="rv-weak"></ul></div>
+    <div class="card"><h2>이렇게 연습해 보세요</h2><ul class="sw t" id="rv-sugg"></ul></div>
+    <div class="card">
+      <h2>기보 다시 보기</h2>
+      <div class="chips" id="rv-chips" style="margin-bottom:10px"></div>
+      <div class="boardbox"><canvas class="board" id="board2"></canvas></div>
+      <div class="nav">
+        <button id="rv-first">⏮</button><button id="rv-prev">◀</button><button id="rv-next">▶</button><button id="rv-last">⏭</button>
+      </div>
+      <div class="rv-note" id="rv-note"></div>
+      <div class="hint">내 수를 볼 때마다 빨간 테두리 = 내가 둔 수, <span style="color:var(--blue);font-weight:700">파란 원</span> = 그 자리에서의 AI 최선수 (같으면 겹쳐서 표시)</div>
+    </div>
+    <button class="btn" id="rv-done">돌아가기</button>
+    <div class="credit">© 2026 제작: 인제고 수학 교사 김수영</div>
+  </section>
+
+  <!-- ═════ 측정 결과 ═════ -->
+  <section id="scr-result" class="hidden">
+    <h1 id="r-name" style="font-size:26px;margin-bottom:14px">측정 결과</h1>
+    <div class="score-card">
+      <div class="muted" style="font-size:13.5px;font-weight:700">오목 기력 점수</div>
+      <div class="big" id="r-score">0</div>
+      <div><span class="tier" id="r-tier">-</span></div>
+      <div class="muted" style="font-size:13px;margin-top:10px" id="r-range"></div>
+    </div>
+    <a class="btn" style="margin-top:0" id="btn-submit" target="_blank" rel="noopener">선생님께 결과 제출</a>
+    <div class="hint" id="submit-hint" style="text-align:center;margin:8px 0 16px">새 창에 '저장 완료'가 보이면 끝이에요. 창을 닫고 이 화면으로 돌아오세요.</div>
+    <div class="card">
+      <div class="kv"><span>대국 성적 점수</span><b id="r-perf"></b></div>
+      <div class="kv"><span>수 정확도</span><b id="r-acc"></b></div>
+      <div class="kv"><span>AI 최선수와 같은 수</span><b id="r-match"></b></div>
+      <div class="kv"><span>전적</span><b id="r-record"></b></div>
+      <div class="kv"><span>이 기기의 측정 기록</span><b id="r-hist"></b></div>
+      <div class="kv"><span>악수 / 실수 / 아쉬운 수</span><b id="r-mist"></b></div>
+    </div>
+    <div class="card"><h2>강점</h2><ul class="sw s" id="r-str"></ul></div>
+    <div class="card"><h2>보완할 점</h2><ul class="sw w" id="r-weak"></ul></div>
+    <div class="card"><h2>다음 단계 제안</h2><ul class="sw t" id="r-sugg"></ul></div>
+    <div class="card">
+      <h2>판별 기록 <span class="muted" style="font-size:12px;font-weight:400">· 누르면 분석</span></h2>
+      <table>
+        <thead><tr><th>판</th><th>내 돌</th><th>상대</th><th>결과</th><th>수</th><th>정확도</th></tr></thead>
+        <tbody id="r-table"></tbody>
+      </table>
+    </div>
+    <div class="reward"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" fill="#f2c14e"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4" stroke="#f2c14e" stroke-width="1.8"/><path d="M10 13.5h4l.6 3.5H9.4l.6-3.5ZM8 18h8v2H8z" fill="#ffdc85"/></svg><b>점수가 높을수록 그에 걸맞은 보상이 있을 예정이에요.</b><br>측정은 몇 번이든 다시 할 수 있어요. 행사 전날까지 측정한 모든 기록의 <b style="font-size:inherit">평균 기력</b>으로 행사를 진행하니, 연습으로 약점을 보완하고 다시 도전해 보세요.</div>
+    <div class="row" style="margin-bottom:8px">
+      <button class="btn dark small" id="btn-go-practice">연습하러 가기</button>
+      <button class="btn small" id="btn-again">다시 측정</button>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="btn-copy">결과 복사</button>
+      <button class="btn ghost" id="btn-home">처음으로</button>
+    </div>
+    <div class="card foot" style="margin-top:12px">
+      <b>점수 계산 방법</b><br>
+      · <b>대국 성적 점수</b>: 상대 단계(점수가 정해진 AI)와의 승패로 계산한 Elo 방식 추정치<br>
+      · <b>수 정확도</b>: 내가 둔 수마다 AI의 최선수와 비교해 승률을 얼마나 잃었는지로 매긴 0~100점<br>
+      · <b>최종 점수</b> = 대국 성적 60% + 정확도 환산 점수 40%<br>
+      · 이미 진 국면(승률 3% 미만)의 수는 정확도 계산에서 뺍니다.<br>
+      · AI 단계 점수는 엔진끼리의 대국으로 정한 잠정값입니다.
+    </div>
+    <div class="credit">© 2026 제작: 인제고 수학 교사 김수영</div>
+  </section>
+</div>
+
+<div class="modal hidden" id="modal"><div class="card" id="modal-body"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ───────────────────────── 설정 ─────────────────────────
+const N = 15;
+const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbyca5Lj9VkL7RzK5yjcJJ0u6u6sFQudTWIeK2pOwgGQkfKs7Z-953dhJegbwT6mldrx/exec';
+const APP_VER = '3.0';
+// Claude 아티팩트(보안 정책으로 전송 차단)가 아닌 곳(GitHub Pages 등)에서는 기록을 백그라운드로 자동 저장
+const AUTO_SUBMIT = !/(claudeusercontent\.com|claude\.ai)$/.test(location.hostname);
+const MOVE_SEC = 30;              // 측정 모드 한 수당 제한 시간(초)
+const RULE = 'renju';
+// 참여 학생 명단 (학번·이름을 해시로 저장 — 페이지 소스에서 명단이 보이지 않게)
+const ROSTER = {"8525f66bea63996c": "9a79bf50ca4c26c2", "2b5bf254af9ed9c9": "b3d5e5a1c9ad7ffc", "c0d2af18e16d8862": "a7e77c138822867f", "89eb6826458b038a": "12952a58e2434a13", "2adff3704cb9623b": "17b1cf485c2e3973", "57bc0c92e9736dde": "7eff90f0fae3ddc5", "990300f46fe2d7d2": "8000caea0aad6f8b", "c9d5907bb27a1ae7": "d65cae260d4b3b34", "99ab60a08b729500": "7b60ec6ae6c29b42", "25a139727b2758ba": "233858f637b142c1", "32b10cb5131cfcf7": "ace6c718412a63fa", "928e540c29925164": "e582be0cfb713bba", "bf2ff18dd9c99ea5": "d7d4f59de465a91d", "e49f6fa2c51a7e68": "d50f499ad0c059db", "bf999f9f2627ee8b": "92342d4e5ebbf761", "fa2e05f02be1f8ca": "d94d13991f713604", "4a786c67e8669452": "77a5363141145916", "b578aa3252e2481a": "885670d494300af4", "67bccd727677702d": "d06826f35d94e66c", "943eb75ad84f1d20": "88164681834a965a", "1aaaa7a13399940d": "c02b23e9642f32b1", "c726aff2c33a82c6": "708f10f53ba2e840", "9bb6e8c40d07ed21": "95278eb1cb2b5bbd", "4971d41c08faf8a6": "913f1e776e90e916", "e2c8c6256dd8d7de": "76b22299590a71de", "16a2b76bad8c708e": "a7785f1eebbaa9df", "8631fbf825503872": "b7f192d363395e88", "f1d66929247a3ee0": "e2842079b858c870"};
+async function rosterHash(t) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('omok-roster-v1|' + t));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+}
+// 공통 참가 비밀번호 (해시로 저장, 비워 두면 비밀번호 없이 참가)
+// 테스트 계정(99999) 전용 비밀번호 — 테스트 계정은 공통 비밀번호 대신 이것으로만 들어옵니다
+const TEST_SID = '99999', TEST_PW_HASH = '';
+const ACCESS_PW_HASH = '6995559bb4f88d31c237003d';
+async function pwHash(t) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('omok-pw-v1|' + t));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 24);
+}
+async function rosterCheck(sid, name) {
+  try {
+    const hs = await rosterHash(sid);
+    if (!(hs in ROSTER)) return 'sid';
+    return ROSTER[hs] === await rosterHash(sid + '|' + name) ? 'ok' : 'name';
+  } catch (e) { return 'ok'; }
+}
+// AI 단계: 엔진 강도(STRENGTH 0~100), 무작위 실수 확률, 착수 시간, 잠정 점수
+const LEVELS = [
+  null,
+  { s: 0,   blunder: 0.45, ms: 300,  rating: 500,  name: '입문', desc: '오목을 막 배운 상대. 엉뚱한 수를 자주 둬요.' },
+  { s: 0,   blunder: 0.25, ms: 300,  rating: 800,  name: '초급', desc: '기본 공격은 하지만 빈틈이 많아요.' },
+  { s: 0,   blunder: 0.10, ms: 400,  rating: 1100, name: '중급', desc: '3과 4는 잘 막는 보통 실력이에요.' },
+  { s: 25,  blunder: 0,    ms: 500,  rating: 1400, name: '중상급', desc: '몇 수 앞을 읽고 함정을 파요.' },
+  { s: 50,  blunder: 0,    ms: 600,  rating: 1700, name: '상급', desc: '웬만해서는 실수하지 않아요.' },
+  { s: 75,  blunder: 0,    ms: 800,  rating: 2000, name: '고수', desc: '공격은 날카롭고 수비는 단단해요.' },
+  { s: 100, blunder: 0,    ms: 1500, rating: 2300, name: '최강', desc: 'AI의 전력. 이기면 정말 대단한 거예요.' },
+];
+const PRIOR_MEAN = 1100, PRIOR_SD = 400;
+const W_PERF = 0.6, W_ACC = 0.4;
+const accToRating = a => Math.round(Math.max(0, Math.min(2600, 1100 + (a - 50) * 27)));
+const TIERS = [[0,'입문'],[800,'초급'],[1100,'중급'],[1400,'중상급'],[1700,'상급'],[2000,'고수'],[2300,'최상급']];
+const tierOf = r => TIERS.filter(t => r >= t[0]).pop()[1];
+let ANALYSIS_NODES = 120000; const ANALYSIS_MS = 2500;
+document.querySelectorAll('.t-sec').forEach(e => e.textContent = MOVE_SEC);
+
+// ───────────────────────── 저장소 (이 기기) ─────────────────────────
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('omok_' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('omok_' + k, JSON.stringify(v)); } catch (e) {} },
+};
+
+// ───────────────────────── 엔진 ─────────────────────────
+class Engine {
+  constructor() {
+    this.w = new Worker('engine-worker.js');
+    this.seq = 0; this.wait = new Map(); this.onProgress = null;
+    this.w.onmessage = (e) => {
+      const d = e.data;
+      if (d.type === 'progress') { this.onProgress && this.onProgress(d); return; }
+      const p = this.wait.get(d.id); if (!p) return; this.wait.delete(d.id);
+      d.type === 'error' ? p.rej(new Error(d.message)) : p.res(d.result);
+    };
+    this.w.onerror = (e) => { for (const p of this.wait.values()) p.rej(new Error(e.message || '엔진 오류')); this.wait.clear(); };
+  }
+  call(cmd, args) { const id = ++this.seq; return new Promise((res, rej) => { this.wait.set(id, { res, rej }); this.w.postMessage({ id, cmd, args }); }); }
+}
+
+// ───────────────────────── 상태 ─────────────────────────
+const S = {
+  sid: '', name: '', confirmedId: '',
+  mode: null,                     // 'measure' | 'practice'
+  nGames: 3, startLevel: 3, pLevel: 3, pColor: 'b',
+  engine: null, engineReady: null,
+  games: [], level: 3, g: null, runId: null,
+  queue: store.get('queue', []), // 아직 제출하지 않은 기록
+  practiceCount: 0,
+};
+const $ = id => document.getElementById(id);
+function show(id) { for (const s of ['scr-start','scr-load','scr-game','scr-review','scr-result']) $(s).classList.toggle('hidden', s !== id); window.scrollTo(0, 0); if (id === 'scr-start') renderHome(); }
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2000); }
+function modal(html) { $('modal-body').innerHTML = html; $('modal').classList.remove('hidden'); }
+function closeModal() { $('modal').classList.add('hidden'); }
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const nowStr = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+
+// ───────────────────────── 시작 화면 ─────────────────────────
+function seg(id, cb) {
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    [...$(id).children].forEach(x => x.classList.toggle('on', x === b)); cb(b.dataset.v);
+  });
+}
+(function buildLadder() {
+  const tones = [null, ['#ffffff','#d6d3cb','#3a3a3a'], ['#eeeeea','#b9b6ae','#2a2a2a'], ['#cfcfcf','#8e8e8e','#1d1d1d'], ['#a9a9a9','#666','#fff'], ['#7a7a7a','#3e3e3e','#fff'], ['#565656','#1e1e1e','#fff'], ['#4a4a4a','#000','#f2c14e']];
+  $('seg-plevel').innerHTML = LEVELS.slice(1).map((L, i) => {
+    const n = i + 1, t = tones[n], sz = 30 + n * 2;
+    return `<button data-v="${n}" class="${n === S.pLevel ? 'on' : ''}" aria-label="${n}단계 ${L.name}"><span class="stone" style="--sz:${sz}px;--hi:${t[0]};--lo:${t[1]};--tx:${t[2]}">${n}</span>${L.name}</button>`;
+  }).join('');
+})();
+function setModeTab(m, scroll) {
+  ['measure', 'practice'].forEach(k => {
+    const on = k === m; $('tab-' + k).classList.toggle('on', on); $('tab-' + k).setAttribute('aria-selected', on);
+    $('mode-' + k).classList.toggle('hidden', !on);
+  });
+  store.set('tab', m);
+  if (scroll) $('mode-' + m).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+document.querySelectorAll('.modetabs button').forEach(b => b.onclick = () => setModeTab(b.dataset.m, false));
+setModeTab(store.get('tab', 'measure'));
+seg('seg-n', v => S.nGames = +v);
+seg('seg-start', v => S.startLevel = +v);
+seg('seg-plevel', v => { S.pLevel = +v; plevelHint(); });
+seg('seg-pcolor', v => S.pColor = v);
+function plevelHint() {
+  const L = LEVELS[S.pLevel];
+  $('lv-big').textContent = S.pLevel; $('lv-name').textContent = `${L.name} · 약 ${L.rating}점`;
+  $('plevel-hint').textContent = L.desc; $('lv-bar').style.width = (S.pLevel / 7 * 100) + '%';
+}
+plevelHint();
+
+if (!ACCESS_PW_HASH) $('pw-wrap').classList.add('hidden');
+try { if (sessionStorage.getItem('omok_pw') === '1') { S.pwOk = true; $('pw-wrap').classList.add('hidden'); } } catch (e) {}
+$('pw').addEventListener('input', () => $('pw').classList.remove('err'));
+const saved = store.get('me', null);
+if (saved) { $('sid').value = saved.sid || ''; $('name').value = saved.name || ''; }
+
+function validateId() {
+  const sid = $('sid').value.replace(/\s/g, ''), name = $('name').value.trim().replace(/\s+/g, ' ');
+  let err = '';
+  $('sid').classList.remove('err'); $('name').classList.remove('err');
+  if (!/^\d{5}$/.test(sid)) { err = '학번은 숫자 5자리로 입력하세요. (예: 10101 = 1학년 1반 1번)'; $('sid').classList.add('err'); }
+  else if (!/^[가-힣]{2,5}$/.test(name) && !/^[A-Za-z][A-Za-z ]{1,19}$/.test(name)) { err = '이름을 정확히 입력하세요. (한글 2~5자)'; $('name').classList.add('err'); }
+  $('id-err').textContent = err;
+  return err ? null : { sid, name };
+}
+['sid', 'name'].forEach(id => $(id).addEventListener('input', () => { if ($('id-err').textContent) validateId(); }));
+
+function confirmId() {
+  return new Promise(resolve => {
+    const me = validateId(); if (!me) { (document.querySelector('input.err') || $('sid')).focus(); return resolve(false); }
+    (async () => {
+      const isTest = me.sid === TEST_SID && TEST_PW_HASH;
+      const needHash = isTest ? TEST_PW_HASH : ACCESS_PW_HASH;
+      if (isTest ? S.pwOk !== 'test' : S.pwOk !== true) S.pwOk = false;
+      if (needHash && !S.pwOk) {
+        $('pw-wrap').classList.remove('hidden');
+        const pw = $('pw').value.trim();
+        if (!pw || await pwHash(pw) !== needHash) { $('id-err').textContent = pw ? '비밀번호가 맞지 않아요. 선생님께 받은 비밀번호를 다시 확인하세요.' : '참가 비밀번호를 입력하세요.'; $('pw').classList.add('err'); $('pw').focus(); return 'stop'; }
+        S.pwOk = isTest ? 'test' : true; if (!isTest) { try { sessionStorage.setItem('omok_pw', '1'); } catch (e) {} }
+        $('pw').classList.remove('err');
+      }
+      return rosterCheck(me.sid, me.name);
+    })().then(rc => {
+    if (rc === 'stop') return resolve(false);
+    if (rc === 'sid') { $('id-err').textContent = '등록되지 않은 학번이에요. 학번을 다시 확인하거나 선생님께 등록을 요청하세요.'; $('sid').classList.add('err'); $('sid').focus(); return resolve(false); }
+    if (rc === 'name') { $('id-err').textContent = '학번과 이름이 등록된 정보와 달라요. 이름을 다시 확인해 입력하세요.'; $('name').classList.add('err'); $('name').focus(); return resolve(false); }
+    const warn = '';
+    const key = me.sid + '|' + me.name;
+    if (S.confirmedId === key) { S.sid = me.sid; S.name = me.name; return resolve(true); }
+    modal(`<div class="m-title">내 정보가 맞나요?</div>
+      <div class="idbox">${esc(me.sid)} ${esc(me.name)}</div>${warn}
+      <p class="muted" style="font-size:13.5px;line-height:1.6">${esc(me.sid[0])}학년 ${+me.sid.slice(1, 3)}반 ${+me.sid.slice(3)}번 · 기록이 이 이름으로 저장돼요.</p>
+      <div class="row"><button class="btn ghost" id="cf-no">고칠래요</button><button class="btn" id="cf-yes">맞아요</button></div>`);
+    $('cf-no').onclick = () => { closeModal(); resolve(false); };
+    $('cf-yes').onclick = () => { closeModal(); S.confirmedId = key; S.sid = me.sid; S.name = me.name; store.set('me', me); resolve(true); };
+    });
+  });
+}
+
+function renderHome() {
+  // 제출 대기 기록
+  const n = S.queue.length;
+  $('pending-banner').classList.toggle('hidden', !n || !SUBMIT_URL);
+  if (n && SUBMIT_URL) { $('pending-text').textContent = AUTO_SUBMIT ? `저장하지 못한 기록 ${n}건이 있어요.` : `제출하지 않은 기록 ${n}건이 있어요.`; setSubmitLink($('pending-link'), '제출하기', renderHome); }
+  // 측정 기록
+  const h = store.get('hist', []);
+  $('hist-card').classList.toggle('hidden', !h.length);
+  const avg = h.length ? Math.round(h.reduce((a, x) => a + x.score, 0) / h.length) : 0;
+  $('hist').innerHTML = `<div><span>측정 ${h.length}회 · 평균 기력</span><span><b>${avg}</b></span></div>` + h.slice(-8).reverse().map(x => `<div><span class="muted">${esc(x.at)}</span><span><b>${x.score}</b> · ${esc(x.tier)}</span></div>`).join('');
+}
+
+$('btn-measure').onclick = async () => {
+  if (!(await confirmId())) return;
+  if (!(await ensureEngine())) return;
+  S.mode = 'measure'; S.games = []; S.level = S.startLevel; S.runId = 'M-' + uid(); S.runAt = nowStr();
+  startGame();
+};
+$('btn-practice').onclick = async () => {
+  if (!(await confirmId())) return;
+  if (!(await ensureEngine())) return;
+  S.mode = 'practice'; S.level = S.pLevel; S.runId = null;
+  startGame();
+};
+
+async function ensureEngine() {
+  if (S.engineReady) return S.engineReady;
+  show('scr-load');
+  S.engineReady = (async () => {
+    try {
+      S.engine = new Engine();
+      S.engine.onProgress = d => {
+        const pct = d.total ? Math.min(100, Math.round(d.loaded / d.total * 100)) : 0;
+        $('load-bar').style.width = pct + '%';
+        if (d.cached) { $('load-msg').textContent = '이 기기에 저장된 AI를 불러오고 있어요. 다운로드는 필요 없어요.'; $('load-pct').textContent = '저장된 파일 사용 중'; }
+        else $('load-pct').textContent = pct + '% · ' + (d.loaded / 1048576).toFixed(1) + ' / ' + (d.total / 1048576).toFixed(1) + 'MB · 처음 한 번만 내려받아요';
+      };
+      await S.engine.call('init', { rule: RULE });
+      $('load-msg').textContent = '기기 속도를 확인하고 있어요.'; $('load-bar').style.width = '100%';
+      const r = await S.engine.call('search', { moves: [[7,7],[8,8],[8,6]], nodes: 40000, timeMs: 4000 });
+      const nps = 40000 / Math.max(50, r.ms) * 1000;
+      ANALYSIS_NODES = Math.round(Math.max(30000, Math.min(200000, nps * 1.4)));
+      return true;
+    } catch (err) {
+      console.error(err); S.engineReady = null; if (S.engine) S.engine.w.terminate();
+      modal(`<b>AI를 불러오지 못했습니다</b><p class="muted" style="font-size:14px;line-height:1.6">${esc(err.message)}<br>최신 버전의 Chrome, Safari, Edge, 삼성 인터넷에서 다시 열어 주세요.</p><button class="btn" onclick="location.reload()">새로고침</button>`);
+      return false;
+    }
+  })();
+  return S.engineReady;
+}
+
+// ───────────────────────── 판 그리기 ─────────────────────────
+function makeBoard(canvas) {
+  const B = { cv: canvas, ctx: canvas.getContext('2d'), size: 0, pad: 0, cell: 0, state: null };
+  B.resize = () => {
+    const r = canvas.getBoundingClientRect(); if (!r.width) return; const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.width * dpr);
+    B.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    B.size = r.width; B.pad = r.width / (N + 1) * 0.9; B.cell = (r.width - 2 * B.pad) / (N - 1);
+    B.draw();
+  };
+  B.px = i => B.pad + i * B.cell;
+  B.at = (cx, cy) => { const r = canvas.getBoundingClientRect(); return [Math.round((cx - r.left - B.pad) / B.cell), Math.round((cy - r.top - B.pad) / B.cell)]; };
+  B.draw = () => drawBoard(B);
+  return B;
+}
+function drawBoard(B) {
+  const ctx = B.ctx, sz = B.size, st = B.state, px = B.px; if (!sz) return;
+  const grd = ctx.createLinearGradient(0, 0, sz, sz); grd.addColorStop(0, '#e6bd7d'); grd.addColorStop(1, '#d4a25c');
+  ctx.fillStyle = grd; ctx.fillRect(0, 0, sz, sz);
+  ctx.strokeStyle = 'rgba(60,35,10,.75)'; ctx.lineWidth = 1;
+  for (let i = 0; i < N; i++) {
+    ctx.beginPath(); ctx.moveTo(px(0), px(i)); ctx.lineTo(px(N - 1), px(i)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(px(i), px(0)); ctx.lineTo(px(i), px(N - 1)); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(60,35,10,.85)';
+  for (const [x, y] of [[3,3],[11,3],[7,7],[3,11],[11,11]]) { ctx.beginPath(); ctx.arc(px(x), px(y), Math.max(2, B.cell * .1), 0, 7); ctx.fill(); }
+  if (!st) return;
+  const r = B.cell * .46;
+  if (st.forbid) {
+    ctx.strokeStyle = 'rgba(178,69,44,.85)'; ctx.lineWidth = 2; const k = B.cell * .2;
+    for (const [x, y] of st.forbid) { ctx.beginPath(); ctx.moveTo(px(x)-k, px(y)-k); ctx.lineTo(px(x)+k, px(y)+k); ctx.moveTo(px(x)+k, px(y)-k); ctx.lineTo(px(x)-k, px(y)+k); ctx.stroke(); }
+  }
+  const upto = st.upto == null ? st.moves.length : st.upto;
+  for (let i = 0; i < upto; i++) stone(B, st.moves[i][0], st.moves[i][1], i % 2 === 0, r, 1, st.numbers ? i + 1 : null);
+  if (st.preview) {
+    stone(B, st.preview[0], st.preview[1], st.previewBlack, r, .55);
+    ctx.strokeStyle = '#d23b2a'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(px(st.preview[0]), px(st.preview[1]), r + 2, 0, 7); ctx.stroke();
+  }
+  if (st.pv) {
+    st.pv.moves.forEach(([x, y], i) => {
+      const blk = st.pv.startBlack ? i % 2 === 0 : i % 2 === 1;
+      stone(B, x, y, blk, r, .62, (st.pv.start || 1) + i);
+      ctx.strokeStyle = '#f2c14e'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.arc(px(x), px(y), r + 1, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+    });
+  }
+  if (st.best) {
+    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(px(st.best[0]), px(st.best[1]), r * .95, 0, 7); ctx.stroke();
+    ctx.fillStyle = 'rgba(37,99,235,.18)'; ctx.fill();
+  }
+  if (st.ring) { ctx.strokeStyle = '#d23b2a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(px(st.ring[0]), px(st.ring[1]), r + 1.5, 0, 7); ctx.stroke(); }
+  const last = upto ? st.moves[upto - 1] : null;
+  if (last && !st.numbers) { ctx.fillStyle = '#d23b2a'; ctx.beginPath(); ctx.arc(px(last[0]), px(last[1]), r * .28, 0, 7); ctx.fill(); }
+  if (st.winLine) { ctx.strokeStyle = 'rgba(210,59,42,.9)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(px(st.winLine[0][0]), px(st.winLine[0][1])); ctx.lineTo(px(st.winLine[1][0]), px(st.winLine[1][1])); ctx.stroke(); }
+}
+function stone(B, x, y, black, r, a, num) {
+  const ctx = B.ctx; ctx.globalAlpha = a; const cx = B.px(x), cy = B.px(y);
+  const gr = ctx.createRadialGradient(cx - r * .35, cy - r * .35, r * .1, cx, cy, r);
+  if (black) { gr.addColorStop(0, '#5a5a5a'); gr.addColorStop(1, '#0b0b0b'); } else { gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#cfcac0'); }
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+  if (!black) { ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 1; ctx.stroke(); }
+  if (num) { ctx.fillStyle = black ? '#fff' : '#111'; ctx.font = `700 ${Math.max(8, r * (num > 99 ? .7 : .85))}px "Noto Sans KR",sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(num, cx, cy + .5); }
+  ctx.globalAlpha = 1;
+}
+const GB = makeBoard($('board')), RB = makeBoard($('board2'));
+window.addEventListener('resize', () => { GB.resize(); RB.resize(); });
+
+// ───────────────────────── 규칙 · 위협 판정 ─────────────────────────
+const DIRS = [[1,0],[0,1],[1,1],[1,-1]];
+const inb = (x, y) => x >= 0 && y >= 0 && x < N && y < N;
+function grid(moves) { const b = [...Array(N)].map(() => Array(N).fill(0)); moves.forEach(([x, y], i) => b[y][x] = i % 2 ? 2 : 1); return b; }
+function lineAt(b, x, y, c) {
+  let best = { n: 0 };
+  for (const [dx, dy] of DIRS) {
+    let n = 1, a = [x, y], z = [x, y];
+    for (const s of [1, -1]) { let i = x + dx * s, j = y + dy * s; while (inb(i, j) && b[j][i] === c) { n++; s > 0 ? z = [i, j] : a = [i, j]; i += dx * s; j += dy * s; } }
+    if (n > best.n) best = { n, ends: [a, z] };
+  }
+  return best;
+}
+function isWin(b, x, y, c) { const l = lineAt(b, x, y, c); const ok = (RULE === 'renju' && c === 1) ? l.n === 5 : l.n >= 5; return ok ? l.ends : null; }
+function winPoints(b, c) { const pts = []; for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!b[y][x]) { b[y][x] = c; if (isWin(b, x, y, c)) pts.push([x, y]); b[y][x] = 0; } return pts; }
+// (x,y)에 c를 두면 열린 4(_XXXX_)가 생기는가
+function makesOpenFour(b, x, y, c) {
+  for (const [dx, dy] of DIRS) {
+    const cell = k => { const i = x + dx * k, j = y + dy * k; return inb(i, j) ? (k === 0 ? c : b[j][i]) : -1; };
+    for (let s = -5; s <= 0; s++) {
+      if (cell(s) !== 0 || cell(s + 5) !== 0) continue;
+      let ok = true; for (let k = s + 1; k <= s + 4; k++) if (cell(k) !== c) { ok = false; break; }
+      if (ok) {
+        if (RULE === 'renju' && c === 1 && (cell(s - 1) === 1 || cell(s + 6) === 1)) continue;
+        return true;
+      }
+    }
+  }
+  return false;
+}
+function openFourPoints(b, c) { const pts = []; for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!b[y][x] && makesOpenFour(b, x, y, c)) pts.push([x, y]); return pts; }
+const same = (a, b) => a && b && a[0] === b[0] && a[1] === b[1];
+const has = (list, p) => list.some(q => same(q, p));
+const coord = ([x, y]) => 'ABCDEFGHJKLMNOP'[x] + (N - y);
+
+// ───────────────────────── 대국 진행 ─────────────────────────
+function startGame() {
+  const measuring = S.mode === 'measure';
+  const idx = measuring ? S.games.length : S.practiceCount;
+  const userBlack = measuring ? idx % 2 === 0 : S.pColor === 'b';
+  S.g = { id: uid(), mode: S.mode, idx, userBlack, level: S.level, moves: [], recs: [], turn: null, preview: null, forbid: null, over: false, pendingBefore: null, startedAt: nowStr() };
+  $('g-title').textContent = measuring ? `측정 ${idx + 1} / ${S.nGames}판` : `연습 대국`;
+  $('g-level').textContent = `상대 ${S.level}단계`;
+  $('g-timer').classList.toggle('hidden', !measuring);
+  $('pl-user-name').textContent = S.name || '나';
+  $('pl-user-st').className = 'st ' + (userBlack ? 'b' : 'w');
+  $('pl-ai-st').className = 'st ' + (userBlack ? 'w' : 'b');
+  show('scr-game'); GB.state = gameState(); GB.resize(); updatePlace();
+  if (userBlack) userTurn(); else aiTurn(true);
+}
+function gameState() { const g = S.g; return { moves: g.moves, preview: g.preview, previewBlack: g.userBlack, forbid: g.turn === 'user' ? g.forbid : null, winLine: g.winLine }; }
+function redraw() { GB.state = gameState(); GB.draw(); }
+function setTurn(t) { S.g.turn = t; $('pl-user').classList.toggle('turn', t === 'user'); $('pl-ai').classList.toggle('turn', t === 'ai'); updatePlace(); }
+function status(html, thinking) { $('status').innerHTML = `<span class="${thinking ? 'thinking' : ''}">${html}</span>`; }
+function updatePlace() { const g = S.g; $('btn-place').disabled = !(g && !g.over && g.turn === 'user' && g.preview); }
+
+// 제한 시간
+let timerH = null;
+function startTimer() {
+  stopTimer(); if (S.mode !== 'measure') return;
+  const g = S.g; const end = Date.now() + MOVE_SEC * 1000; const el = $('g-timer');
+  const tick = () => {
+    const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+    el.textContent = left + '초'; el.classList.toggle('low', left <= 10);
+    if (left <= 0) { stopTimer(); if (S.g === g && !g.over && g.turn === 'user') { toast('시간이 다 됐어요'); endGame(0, '시간패'); } }
+  };
+  tick(); timerH = setInterval(tick, 250);
+}
+function stopTimer() { if (timerH) clearInterval(timerH); timerH = null; }
+
+async function userTurn() {
+  const g = S.g; g.preview = null; g.forbid = null; setTurn('user');
+  if (g.userBlack && g.moves.length) { try { g.forbid = (await S.engine.call('forbid', { moves: g.moves })).points; } catch (e) { g.forbid = []; } }
+  if (g.over || S.g !== g) return;
+  g.pendingBefore = g.moves.length ? S.engine.call('search', { moves: g.moves.slice(), nodes: ANALYSIS_NODES, timeMs: ANALYSIS_MS }) : null;
+  if (g.pendingBefore) g.pendingBefore.catch(() => {});
+  status('<b>내 차례</b> · 자리를 고르고 착수를 누르세요'); g.turnStart = Date.now();
+  redraw(); startTimer();
+}
+
+GB.cv.addEventListener('click', e => {
+  const g = S.g; if (!g || g.over || g.turn !== 'user') return;
+  const [x, y] = GB.at(e.clientX, e.clientY);
+  if (!inb(x, y)) return;
+  if (g.moves.some(m => m[0] === x && m[1] === y)) return;
+  if (g.forbid && has(g.forbid, [x, y])) { toast('흑의 금수 자리예요 (3-3·4-4·장목)'); return; }
+  g.preview = [x, y]; redraw(); updatePlace();
+});
+$('btn-place').onclick = () => { const g = S.g; if (!g || !g.preview || g.turn !== 'user' || g.over) return; const [x, y] = g.preview; g.preview = null; userMove(x, y); };
+
+function userMove(x, y) {
+  const g = S.g; const ply = g.moves.length; stopTimer();
+  g.moves.push([x, y]); setTurn('ai'); redraw();
+  g.recs.push({ ply, move: [x, y], before: g.pendingBefore, loss: null, ms: g.turnStart ? Date.now() - g.turnStart : null });
+  const c = g.userBlack ? 1 : 2; const w = isWin(grid(g.moves), x, y, c);
+  if (w) { g.winLine = w; const r = g.recs[g.recs.length - 1]; r.loss = 0; redraw(); return endGame(1, '5목'); }
+  if (g.moves.length >= N * N) return endGame(0.5, '무승부');
+  aiTurn(false);
+}
+
+async function aiTurn(first) {
+  const g = S.g; setTurn('ai'); status('AI가 생각하는 중', true);
+  const L = LEVELS[g.level]; let move;
+  try {
+    if (first && g.moves.length === 0) { move = [7, 7]; await sleep(400); }
+    else {
+      const after = await S.engine.call('search', { moves: g.moves.slice(), nodes: ANALYSIS_NODES, timeMs: ANALYSIS_MS });
+      const rec = g.recs[g.recs.length - 1];
+      if (rec && rec.before) {
+        const before = await rec.before;
+        rec.wBest = before.winrate; rec.best = before.move; rec.pvBest = before.pv; rec.pvAfter = after.pv; rec.wAfter = 1 - after.winrate; rec.loss = Math.max(0, rec.wBest - rec.wAfter);
+      } else if (rec) { rec.loss = 0; rec.wBest = 0.5; }
+      const b = grid(g.moves); const me = g.userBlack ? 2 : 1, opp = 3 - me;
+      const forced = winPoints(b, me).length || winPoints(b, opp).length;
+      const canBlunder = L.blunder > 0 && !forced && me !== 1;
+      if (canBlunder && Math.random() < L.blunder) { move = randomNear(b); await sleep(250); }
+      else if (L.s >= 100) move = after.move;
+      else move = (await S.engine.call('search', { moves: g.moves.slice(), strength: L.s, timeMs: L.ms })).move;
+    }
+  } catch (err) { console.error(err); status('AI 오류가 생겼습니다. 새로고침해 주세요.'); return; }
+  if (g !== S.g || g.over) return;
+  if (!move || g.moves.some(m => same(m, move))) move = randomNear(grid(g.moves));
+  g.moves.push(move); redraw();
+  const c = g.userBlack ? 2 : 1; const w = isWin(grid(g.moves), move[0], move[1], c);
+  if (w) { g.winLine = w; redraw(); return endGame(0, '5목'); }
+  if (g.moves.length >= N * N) return endGame(0.5, '무승부');
+  userTurn();
+}
+function randomNear(b) {
+  const c = [];
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!b[y][x]) {
+    let near = false; for (let dy = -2; dy <= 2 && !near; dy++) for (let dx = -2; dx <= 2; dx++) { const i = x + dx, j = y + dy; if (inb(i, j) && b[j][i]) { near = true; break; } }
+    if (near) c.push([x, y]);
+  }
+  return c.length ? c[(Math.random() * c.length) | 0] : [7, 7];
+}
+
+$('btn-resign').onclick = () => {
+  const g = S.g; if (!g || g.over) return;
+  modal(`<b>이 판을 기권할까요?</b><p class="muted" style="font-size:14px">기권하면 패배로 기록돼요.</p><div class="row"><button class="btn ghost" onclick="closeModal()">계속 두기</button><button class="btn" id="rs-yes">기권</button></div>`);
+  $('rs-yes').onclick = () => { closeModal(); endGame(0, '기권'); };
+};
+
+// ───────────────────────── 분석 ─────────────────────────
+const moveAcc = loss => Math.max(0, Math.min(100, 103.1668 * Math.exp(-0.04354 * loss * 100) - 3.1669));
+const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+const sev = loss => loss >= 0.30 ? 'b' : loss >= 0.15 ? 'm' : loss >= 0.07 ? 'i' : '';
+const SEVNAME = { b: '악수', m: '실수', i: '아쉬운 수' };
+
+// ── 돌 모양 판정 ──
+function countDir(b, x, y, c, dx, dy) { let n = 1; for (const s of [1, -1]) { let i = x + dx * s, j = y + dy * s; while (inb(i, j) && b[j][i] === c) { n++; i += dx * s; j += dy * s; } } return n; }
+const fiveOk = (n, c) => (RULE === 'renju' && c === 1) ? n === 5 : n >= 5;
+function dirFourPts(b, x, y, c, dx, dy) {        // (x,y)에 c가 놓인 상태에서 이 줄의 5목 자리 수
+  let pts = 0;
+  for (let k = -4; k <= 4; k++) { if (!k) continue; const i = x + dx * k, j = y + dy * k; if (!inb(i, j) || b[j][i]) continue; b[j][i] = c; if (fiveOk(countDir(b, i, j, c, dx, dy), c)) pts++; b[j][i] = 0; }
+  return pts;
+}
+function dirOpenFour(b, x, y, c, dx, dy) {        // (x,y)를 포함한 열린 4(_XXXX_)
+  const cell = k => { const i = x + dx * k, j = y + dy * k; return inb(i, j) ? b[j][i] : -1; };
+  for (let s = -3; s <= 0; s++) {
+    if (cell(s - 1) !== 0 || cell(s + 4) !== 0) continue;
+    let ok = true; for (let k = s; k <= s + 3; k++) if (cell(k) !== c) { ok = false; break; }
+    if (!ok) continue;
+    if (RULE === 'renju' && c === 1 && (cell(s - 2) === 1 || cell(s + 5) === 1)) continue;
+    return true;
+  }
+  return false;
+}
+function dirOpenThree(b, x, y, c, dx, dy) {       // 이 줄에 한 수 더 두면 (x,y)를 포함한 열린 4
+  for (let k = -4; k <= 4; k++) {
+    if (!k) continue; const i = x + dx * k, j = y + dy * k; if (!inb(i, j) || b[j][i]) continue;
+    b[j][i] = c; const ok = dirOpenFour(b, x, y, c, dx, dy); b[j][i] = 0; if (ok) return true;
+  }
+  return false;
+}
+const WIN = ['5목', '열린 4', '4-4', '4-3', '3-3'];
+function shape(b, x, y, c) {
+  if (!inb(x, y) || b[y][x]) return { label: '' };
+  b[y][x] = c;
+  let five = false, over = false, openFour = false, fours = 0, threes = 0;
+  for (const [dx, dy] of DIRS) {
+    const n = countDir(b, x, y, c, dx, dy);
+    if (fiveOk(n, c)) five = true; else if (n > 5) over = true;
+    if (dirOpenFour(b, x, y, c, dx, dy)) { openFour = true; fours++; continue; }
+    if (dirFourPts(b, x, y, c, dx, dy) > 0) { fours++; continue; }
+    if (dirOpenThree(b, x, y, c, dx, dy)) threes++;
+  }
+  b[y][x] = 0;
+  let label = '';
+  if (five) label = '5목';
+  else if (RULE === 'renju' && c === 1 && (over || fours >= 2 || threes >= 2)) label = '금수';
+  else if (openFour) label = '열린 4';
+  else if (fours >= 2) label = '4-4';
+  else if (fours >= 1 && threes >= 1) label = '4-3';
+  else if (threes >= 2) label = '3-3';
+  else if (fours === 1) label = '4';
+  else if (threes === 1) label = '열린 3';
+  return { label, fours, threes };
+}
+const isWinShape = s => s && WIN.includes(s.label);
+const isAttack = s => s && (s.label === '4' || s.label === '열린 3');
+function nearDist(b, x, y) { let d = 99; for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) if (b[j][i] && !(i === x && j === y)) d = Math.min(d, Math.max(Math.abs(i - x), Math.abs(j - y))); return d; }
+const josa = (w, a, b2) => { const c = w.charCodeAt(w.length - 1); const has = c >= 0xAC00 && c <= 0xD7A3 ? (c - 0xAC00) % 28 > 0 : /[0-9]$/.test(w) ? '013678'.includes(w.slice(-1)) : false; return w + (has ? a : b2); };
+
+// 예상 수순(pv)을 따라 두면서 target 색이 처음 만드는 공격/결정타 모양 찾기
+function pvPlan(b0, pv, firstColor, target) {
+  if (!pv || !pv.length) return null;
+  const b = b0.map(r => r.slice()); let best = null;
+  for (let i = 0; i < Math.min(pv.length, 9); i++) {
+    const [x, y] = pv[i]; if (!inb(x, y) || b[y][x]) break;
+    const c = i % 2 === 0 ? firstColor : 3 - firstColor;
+    if (c === target) {
+      const sh = shape(b, x, y, c);
+      if (isWinShape(sh)) return { i, move: [x, y], label: sh.label, win: true };
+      if (!best && isAttack(sh)) best = { i, move: [x, y], label: sh.label, win: false };
+    }
+    b[y][x] = c;
+  }
+  return best;
+}
+const seqStr = (pv, n) => pv.slice(0, n).map(coord).join(' → ');
+// 한 수에 대한 설명: 왜 좋은지 / 왜 손해인지
+function explainMove(g, rec) {
+  if (rec.why) return rec.why;
+  const me = g.userBlack ? 1 : 2, opp = 3 - me, m = rec.move, best = rec.best;
+  const b = grid(g.moves.slice(0, rec.ply)), b2 = grid(g.moves.slice(0, rec.ply + 1));
+  const shM = shape(b, m[0], m[1], me);
+  const myFive = winPoints(b, me), oppFive = winPoints(b, opp);
+  const oppO3 = oppFive.length ? [] : openFourPoints(b, opp);
+  const out = { reasons: [], code: null, good: null, label: shM.label };
+  if (!best) { out.reasons.push('첫 수는 분석하지 않아요. 가운데 근처가 무난한 출발이에요.'); return (rec.why = out); }
+  if ((rec.wBest || 0) < 0.04 && (rec.loss || 0) < 0.07 && !same(best, m)) {
+    out.decided = true;
+    out.reasons.push(oppFive.length && !winPoints(b2, opp).length ? '상대의 4를 막았어요. 다만 이미 상대에게 이기는 수순이 있는 국면이라 승률 차이가 거의 없어요.' : '이미 상대에게 이기는 수순이 있는 국면이라 어떤 수를 둬도 승률 차이가 거의 없어요. 이 앞의 수에서 원인을 찾아보세요.');
+    return (rec.why = out);
+  }
+  if (same(best, m) || (rec.loss || 0) < 0.07) {
+    if (shM.label === '5목') out.reasons.push('5목을 완성했어요!');
+    else if (isWinShape(shM)) { out.reasons.push(`${shM.label}를 만들었어요. 상대가 한 번에 모두 막을 수 없는 결정타예요.`); out.good = 'win'; }
+    else if (oppFive.length && !winPoints(b2, opp).length) { out.reasons.push('상대의 4를 정확히 막았어요.'); out.good = 'block'; }
+    else if (oppO3.length && !openFourPoints(b2, opp).length) { out.reasons.push(`상대의 열린 3을 막았어요.${isAttack(shM) ? ` 동시에 ${josa(shM.label, '을', '를')} 만들어 반격까지 했어요.` : ''}`); out.good = 'block'; }
+    else if (isAttack(shM)) { out.reasons.push(`${josa(shM.label, '을', '를')} 만들어 상대가 막게 하는 공격 수(선수)예요.`); out.good = 'attack'; }
+    else out.reasons.push(same(best, m) ? 'AI가 고른 자리와 같아요. 돌의 연결과 상대 견제를 모두 고려한 자리예요.' : `AI 추천 수(${coord(best)})와 거의 차이가 없는 좋은 수예요.`);
+    return (rec.why = out);
+  }
+  // 손해 본 수
+  const shB = shape(b, best[0], best[1], me), oppB = shape(b, best[0], best[1], opp);
+  const r = rec.pvAfter && rec.pvAfter[0];
+  const shR = r && inb(r[0], r[1]) && !b2[r[1]][r[0]] ? shape(b2, r[0], r[1], opp) : null;
+  const myM = isAttack(shM) || isWinShape(shM) ? ` 내 수도 ${josa(shM.label, '을', '를')} 만들었지만 더 급한 자리가 있었어요.` : '';
+  const myPlan = pvPlan(b, rec.pvBest, me, me), oppPlan = pvPlan(b2, rec.pvAfter, opp, opp);
+  const bc = coord(best), wA = rec.wAfter != null ? rec.wAfter : (rec.wBest || 0) - (rec.loss || 0);
+  const keyBlock = rec.pvAfter && rec.pvAfter.slice(0, 6).some(q => same(q, best)) ? ` AI 추천 수 ${josa(bc, '은', '는')} 그 자리를 먼저 차지해 공격을 막는 수였어요.` : '';
+  if (myFive.length) {
+    out.code = 'miss5'; out.reasons.push(`${coord(myFive[0])}에 두면 바로 5목으로 이기는 장면이었어요. 내 4가 이미 있었어요.`);
+  } else if (oppFive.length && winPoints(b2, opp).length) {
+    out.code = 'miss4block'; out.reasons.push(`상대에게 4가 있었어요. ${coord(oppFive[0])}를 막지 않으면 상대가 바로 5목을 만들어요.${myM}`);
+  } else if (isWinShape(shB) && !isWinShape(shM)) {
+    out.code = 'missWin'; out.reasons.push(`${coord(best)}에 두면 ${josa(shB.label, '이', '가')} 되어 상대가 한 번에 막을 수 없었어요. 이길 수 있는 결정타를 놓쳤어요.`);
+  } else if (oppO3.length && openFourPoints(b2, opp).length && !winPoints(b2, me).length) {
+    const p = openFourPoints(b2, opp)[0];
+    out.code = 'miss3block'; out.reasons.push(`상대의 열린 3(양 끝이 빈 3)을 그대로 뒀어요. 상대가 ${coord(p)}에 두면 열린 4가 되어 더 이상 막을 수 없어요.${myM}`);
+  } else if ((rec.wBest || 0) >= 0.85 && (rec.loss || 0) >= 0.3 && myPlan && myPlan.win) {
+    out.code = 'missWin';
+    out.reasons.push(`이길 수 있는 국면이었어요. ${bc}부터 두면 ${myPlan.i === 0 ? '바로' : `${myPlan.i + 1}수 뒤`} ${coord(myPlan.move)}에서 ${josa(myPlan.label, '이', '가')} 완성되는 공격 수순이 있었어요 (${seqStr(rec.pvBest, myPlan.i + 1)}).${myM}`);
+  } else if (wA <= 0.15 && oppPlan && oppPlan.win) {
+    out.code = 'allowDouble';
+    out.reasons.push(oppPlan.i === 0
+      ? `이 수 뒤 상대가 바로 ${coord(oppPlan.move)}에 두면 ${josa(oppPlan.label, '이', '가')} 만들어져 막을 수 없어요.${keyBlock}`
+      : `이 수 뒤 상대에게 이기는 공격 수순이 생겼어요. 상대가 ${coord(r)}부터 공격하면 ${coord(oppPlan.move)}에서 ${josa(oppPlan.label, '이', '가')} 만들어져요 (${seqStr(rec.pvAfter, oppPlan.i + 1)}).${keyBlock}`);
+  } else if (shR && isWinShape(shR)) {
+    out.code = 'allowDouble';
+    out.reasons.push(`이 수 다음에 상대가 ${coord(r)}에 두면 ${josa(shR.label, '이', '가')} 만들어져 막기 어려워요.` +
+      (same(best, r) ? ` AI 추천 수 ${josa(coord(best), '은', '는')} 바로 그 급소를 먼저 차지하는 수였어요.` : isWinShape(oppB) ? ` ${josa(coord(best), '은', '는')} 상대의 ${shR.label} 자리를 미리 끊는 수였어요.` : ` AI는 ${coord(best)}로 이 공격을 미리 막으려 했어요.`));
+  } else if (isAttack(shB) && !isAttack(shM)) {
+    out.code = 'loseInitiative';
+    out.reasons.push(`${coord(best)}에 두면 ${josa(shB.label, '을', '를')} 만들어 상대가 막기 바빠져요(선수). 내 수는 공격할 기회를 넘겨줬어요.` + (shR && shR.label ? ` 오히려 상대가 ${coord(r)}에 ${josa(shR.label, '을', '를')} 만들며 주도권을 가져가요.` : ''));
+  } else if (oppB.label && oppB.label !== '금수' && !same(best, m)) {
+    out.code = 'missKey';
+    out.reasons.push(`${josa(coord(best), '은', '는')} 상대가 두면 ${josa(oppB.label, '이', '가')} 되는 상대의 좋은 자리였어요. 공격하기 전에 상대의 급소부터 막는 게 중요했어요.`);
+  } else if (nearDist(b, m[0], m[1]) >= 3) {
+    out.code = 'far'; out.reasons.push('돌이 모여 싸우는 곳에서 멀리 떨어진 수였어요. 그동안 상대가 중요한 자리를 차지해요.');
+  } else {
+    out.code = 'shape';
+    if (oppPlan) out.reasons.push(`이 수 뒤 상대가 ${seqStr(rec.pvAfter, Math.min(oppPlan.i + 1, 5))} 순서로 ${coord(oppPlan.move)}에 ${josa(oppPlan.label, '을', '를')} 만들며 공격을 시작해요.${keyBlock || ` ${josa(bc, '은', '는')} 그 흐름을 미리 막는 자리였어요.`}`);
+    else if (myPlan) out.reasons.push(`${bc}에 두면 이어서 ${coord(myPlan.move)}에 ${josa(myPlan.label, '을', '를')} 만들 수 있어 공격의 발판이 됐어요. 내 수는 그 흐름을 만들지 못했어요.`);
+    else out.reasons.push(`${josa(bc, '은', '는')} 내 돌들과 더 잘 이어지고 상대 돌의 연결을 끊는 자리였어요. 아래 '예상 수순'으로 차이를 확인해 보세요.`);
+    if (wA <= 0.3 && (rec.wBest || 0) >= 0.5) out.reasons.push('이 수로 유리하던 판이 불리하게 바뀌었어요. 두기 전에 상대가 다음에 둘 수 있는 가장 아픈 자리를 먼저 찾아보세요.');
+  }
+  return (rec.why = out);
+}
+
+function analyzeGame(g) {
+  const me = g.userBlack ? 1 : 2, opp = 3 - me;
+  const A = { accs: [], match: { n: 0, ok: 0 }, def4: { n: 0, ok: 0 }, def3: { n: 0, ok: 0 }, five: { n: 0, ok: 0 }, conv: { n: 0, ok: 0 },
+              ph: { early: [], mid: [], late: [] }, blunders: 0, mistakes: 0, inacc: 0, list: [], codes: {}, goods: {}, gi: g.idx + 1, measure: g.mode === 'measure' };
+  g.recs.forEach((r, k) => {
+    if (r.loss == null) return;
+    const b = grid(g.moves.slice(0, r.ply)), b2 = grid(g.moves.slice(0, r.ply + 1));
+    const myFive = winPoints(b, me);
+    if (myFive.length) { A.five.n++; if (has(myFive, r.move)) A.five.ok++; }
+    else {
+      const o4 = winPoints(b, opp);
+      if (o4.length) { A.def4.n++; if (!winPoints(b2, opp).length) A.def4.ok++; }
+      else if (openFourPoints(b, opp).length) { A.def3.n++; if (!openFourPoints(b2, opp).length || winPoints(b2, me).length > 0) A.def3.ok++; }
+    }
+    const ex = explainMove(g, r);
+    const counted = r.wBest != null && r.wBest >= 0.03 && r.ply >= 2;
+    if (ex.good) { (A.goods[ex.good] = A.goods[ex.good] || []).push({ k: r.ply + 1, g: A.gi, label: ex.label }); }
+    if (!counted) return;
+    const acc = moveAcc(r.loss); A.accs.push(acc);
+    if (r.best) { A.match.n++; if (same(r.best, r.move)) A.match.ok++; }
+    if (r.wBest >= 0.9 && !myFive.length) { A.conv.n++; if (r.loss < 0.2) A.conv.ok++; }
+    (k < 5 ? A.ph.early : k < 12 ? A.ph.mid : A.ph.late).push(acc);
+    const s = sev(r.loss);
+    if (s === 'b') A.blunders++; else if (s === 'm') A.mistakes++; else if (s === 'i') A.inacc++;
+    if (s) A.list.push({ k, ply: r.ply, loss: r.loss, sev: s });
+    if ((s === 'b' || s === 'm') && ex.code) (A.codes[ex.code] = A.codes[ex.code] || []).push({ k: r.ply + 1, g: A.gi, loss: r.loss });
+  });
+  A.acc = mean(A.accs); A.n = A.accs.length;
+  return A;
+}
+function mergeA(list) {
+  const M = { accs: [], match: { n: 0, ok: 0 }, def4: { n: 0, ok: 0 }, def3: { n: 0, ok: 0 }, five: { n: 0, ok: 0 }, conv: { n: 0, ok: 0 }, ph: { early: [], mid: [], late: [] }, blunders: 0, mistakes: 0, inacc: 0, games: list.length, codes: {}, goods: {}, multi: true };
+  for (const A of list) {
+    M.accs.push(...A.accs);
+    for (const k of ['match', 'def4', 'def3', 'five', 'conv']) { M[k].n += A[k].n; M[k].ok += A[k].ok; }
+    for (const p of ['early', 'mid', 'late']) M.ph[p].push(...A.ph[p]);
+    M.blunders += A.blunders; M.mistakes += A.mistakes; M.inacc += A.inacc;
+    for (const [c, v] of Object.entries(A.codes)) (M.codes[c] = M.codes[c] || []).push(...v);
+    for (const [c, v] of Object.entries(A.goods)) (M.goods[c] = M.goods[c] || []).push(...v);
+  }
+  M.acc = mean(M.accs); return M;
+}
+const WEAK = {
+  miss5:          { p: 9, t: (n, e) => `5목으로 끝낼 수 있는 자리를 놓쳤어요 (${e}). 상대 수를 막기 전에 내 4가 있는지부터 확인하는 습관이 필요해요.` },
+  miss4block:     { p: 8, t: (n, e) => `상대의 4를 막지 못했어요 (${e}). 상대 돌이 한 줄에 4개 있으면 공격보다 막는 게 먼저예요.` },
+  missWin:        { p: 7, t: (n, e) => `열린 4·4-3 같은 결정타를 놓쳤어요 (${e}). 4와 3을 동시에 만드는 자리를 찾는 연습(4-3 문제)을 해 보세요.` },
+  miss3block:     { p: 6, t: (n, e) => `상대의 열린 3을 막지 않아 열린 4를 허용했어요 (${e}). 양 끝이 비어 있는 3은 바로 한쪽 끝을 막아야 해요.` },
+  allowDouble:    { p: 5, t: (n, e) => `상대에게 4-3·3-3 같은 이중 공격 자리를 내줬어요 (${e}). 상대 돌 두 줄이 만나는 빈자리를 미리 막아 보세요.` },
+  missKey:        { p: 4, t: (n, e) => `상대가 두고 싶은 급소를 먼저 차지하지 못했어요 (${e}). 두기 전에 '상대라면 어디에 둘까?'를 한 번 생각해 보세요.` },
+  loseInitiative: { p: 3, t: (n, e) => `공격할 수 있을 때 소극적인 수를 둬서 흐름을 넘겨줬어요 (${e}). 4나 열린 3으로 상대가 계속 막게 만들면 주도권을 잡을 수 있어요.` },
+  far:            { p: 2, t: (n, e) => `싸움과 먼 곳에 둔 수가 있었어요 (${e}). 좋은 수는 대부분 돌이 모인 곳 2칸 안에 있어요.` },
+  shape:          { p: 1, t: (n, e) => `돌의 연결이 약한 수가 있었어요 (${e}). 기보 다시 보기의 '예상 수순'으로 AI의 연결 방법을 비교해 보세요.` },
+};
+function exStr(list, multi) {
+  const top = list.slice().sort((a, b) => (b.loss || 0) - (a.loss || 0)).slice(0, 2).sort((a, b) => a.g - b.g || a.k - b.k);
+  const s = top.map(x => (multi ? `${x.g}판 ` : '') + `${x.k}수`).join(', ');
+  return list.length > top.length ? `${list.length}번, 예: ${s}` : (list.length > 1 ? `${list.length}번: ${s}` : s);
+}
+function strengthsWeaknesses(A, games = 1) {
+  const multi = !!A.multi && games > 1;
+  const S_ = [], W = [];
+  // 보완할 점 — 실제 실수 장면에서 원인별로
+  Object.entries(A.codes).map(([c, list]) => ({ c, list, score: list.length * 10 + WEAK[c].p }))
+    .sort((a, b) => b.score - a.score).slice(0, 4)
+    .forEach(({ c, list }) => W.push(WEAK[c].t(list.length, exStr(list, multi))));
+  const PN = { early: '초반(포석)', mid: '중반(전투)', late: '종반(마무리)' };
+  const ph = Object.entries(A.ph).filter(([, v]) => v.length >= 3).map(([k, v]) => [k, mean(v)]);
+  if (ph.length >= 2) {
+    const all = mean(A.accs); ph.sort((a, b) => b[1] - a[1]);
+    const [bk, bv] = ph[0], [wk, wv] = ph[ph.length - 1];
+    if (bv >= 70 && bv - wv >= 8) S_.push(`${PN[bk]}이 가장 좋아요 (정확도 ${Math.round(bv)}점).`);
+    if (W.length < 4 && (wv < all - 8 || wv < 45)) W.push(`${PN[wk]}에서 정확도가 떨어져요 (${Math.round(wv)}점). ${wk === 'early' ? '처음 몇 수는 가운데에서 내 돌끼리 가깝게 이어 두세요.' : wk === 'mid' ? '돌이 많아질수록 상대의 3·4를 먼저 살피세요.' : '끝으로 갈수록 서두르지 말고 내 4·상대 4를 꼭 확인하세요.'}`);
+  }
+  // 강점 — 실제 잘 둔 장면에서
+  const def = { n: A.def4.n + A.def3.n, ok: A.def4.ok + A.def3.ok };
+  if (def.n >= 2 && def.ok / def.n >= 0.8) S_.push(`상대의 4·열린 3을 잘 막아요 (${def.n}번 중 ${def.ok}번).`);
+  const gw = A.goods.win || [];
+  if (gw.length) S_.push(`결정타를 놓치지 않았어요 (${gw.slice(0, 2).map(x => (multi ? `${x.g}판 ` : '') + `${x.k}수 ${x.label}`).join(', ')}).`);
+  const ga = A.goods.attack || [];
+  if (ga.length >= 3) S_.push(`4·열린 3으로 상대를 몰아붙이는 공격 수가 좋아요 (${ga.length}번).`);
+  if (A.match.n >= 6 && A.match.ok / A.match.n >= 0.45) S_.push(`AI와 같은 수를 자주 골라요 (${Math.round(A.match.ok / A.match.n * 100)}%).`);
+  if (A.acc != null && A.accs.length >= 5 && A.acc >= 80) S_.push(`전체적으로 수가 정확해요 (정확도 ${Math.round(A.acc)}점).`);
+  if (A.conv.n >= 2 && A.conv.ok / A.conv.n >= 0.8) S_.push(`유리한 판을 끝까지 잘 이끌어요 (${A.conv.n}번 중 ${A.conv.ok}번).`);
+  if (!S_.length) S_.push('아직 뚜렷한 강점이 드러나지 않았어요. 연습 대국으로 더 많은 수를 두어 보세요.');
+  if (!W.length) W.push(A.accs.length >= 5 ? '큰 실수가 없었어요. 한 단계 높은 AI에 도전해 보세요!' : '분석할 수 있는 수가 적었어요. 더 길게 두어 보면 정확히 알려 드릴게요.');
+  return { s: S_, w: W };
+}
+const midSW = list => list.map(t => t.includes(').') ? t.split(').')[0] + ')' : t.split('. ')[0]).join(' / ');
+const shortSW = list => list.map(t => t.split(' (')[0].split('. ')[0].replace(/\.$/, '')).join(' / ');
+const pct = (o) => o.n ? Math.round(o.ok / o.n * 100) + '%' : '-';
+const phaseStr = A => ['early', 'mid', 'late'].map(p => A.ph[p].length ? Math.round(mean(A.ph[p])) : '-').join(' / ');
+
+// ───────────────────────── 총평 · 제안 ─────────────────────────
+const wAfterOf = r => r.wAfter != null ? r.wAfter : (r.wBest != null ? r.wBest - (r.loss || 0) : null);
+const P = x => Math.round(x * 100);
+const WSHORT = { miss5: '5목 자리를 놓침', miss4block: '상대 4를 막지 못함', missWin: '결정타를 놓침', miss3block: '상대 열린 3을 방치', allowDouble: '상대에게 이중 공격 자리를 내줌', missKey: '상대 급소를 내줌', loseInitiative: '공격 흐름을 넘겨줌', far: '싸움과 먼 곳에 둠', shape: '돌의 연결이 약함' };
+function timeStats(g) {
+  const ms = g.recs.filter(r => r.ms != null && r.ply >= 2);
+  const bad = ms.filter(r => sev(r.loss || 0) === 'b' || sev(r.loss || 0) === 'm');
+  const good = ms.filter(r => !sev(r.loss || 0));
+  return {
+    avg: ms.length ? mean(ms.map(r => r.ms)) / 1000 : null,
+    bad: bad.length ? mean(bad.map(r => r.ms)) / 1000 : null, nBad: bad.length,
+    good: good.length ? mean(good.map(r => r.ms)) / 1000 : null,
+    rush: ms.filter(r => r.ms < 3000).length, late: ms.filter(r => r.ms > (MOVE_SEC - 6) * 1000).length, n: ms.length,
+  };
+}
+function highlights(g) {
+  return g.recs.filter(r => r.ply >= 2 && r.best && (r.loss || 0) < 0.03 && r.wBest != null && r.wBest >= 0.12 && r.wBest <= 0.9)
+    .map(r => ({ r, ex: explainMove(g, r) })).filter(x => x.ex.good === 'win' || x.ex.good === 'block' || x.ex.good === 'attack')
+    .sort((a, b) => (b.ex.good === 'win') - (a.ex.good === 'win') || b.r.wBest - a.r.wBest).slice(0, 3)
+    .map(x => ({ ply: x.r.ply, label: x.ex.good === 'win' ? '결정타' : x.ex.good === 'block' ? '좋은 수비' : '좋은 공격' }));
+}
+function gameSummary(g) {
+  const recs = g.recs.filter(r => r.ply >= 2 && wAfterOf(r) != null);
+  const out = [];
+  if (!recs.length) return '수가 적어서 흐름을 분석하기 어려워요.';
+  const early = recs.slice(0, 2), e = mean(early.map(wAfterOf));
+  out.push(`초반 ${early[early.length - 1].ply + 1}수까지는 승률 ${P(e)}% 안팎으로 ${e >= 0.62 ? '유리하게' : e <= 0.38 ? '불리하게' : '팽팽하게'} 출발했어요.`);
+  const peak = recs.reduce((a, r) => (r.wBest || 0) > (a.wBest || 0) ? r : a, recs[0]);
+  const turn = recs.reduce((a, r) => (r.loss || 0) > (a.loss || 0) ? r : a, recs[0]);
+  const bigTurn = (turn.loss || 0) >= 0.15, exT = bigTurn ? explainMove(g, turn) : null, why = exT && exT.code ? ` (${WSHORT[exT.code]})` : '';
+  if (bigTurn && g.result !== 1 && peak === turn && (peak.wBest || 0) >= 0.75) {
+    out.push(`승부처는 ${turn.ply + 1}수예요. 이 차례에 승률 ${P(turn.wBest)}%로 이길 수 있었지만, 이 수로 ${P(wAfterOf(turn))}%가 됐어요${why}.`);
+  } else {
+    if (g.result !== 1 && (peak.wBest || 0) >= 0.75) out.push(`${peak.ply + 1}수 차례에는 승률이 ${P(peak.wBest)}%로 이길 기회가 있었어요.`);
+    if (bigTurn) out.push(`승부처는 ${turn.ply + 1}수예요. 이 수로 승률이 ${P(turn.wBest)}% → ${P(wAfterOf(turn))}%로 바뀌었어요${why}.`);
+    else out.push('승률을 크게 잃은 수 없이 안정적으로 두었어요.');
+  }
+  if (g.result === 1) out.push('끝까지 집중해서 5목으로 승리를 마무리했어요.');
+  else if (g.reason === '시간패') out.push('제한 시간을 넘겨 시간패로 끝났어요.');
+  else if (g.reason === '기권') out.push('도중에 기권했어요.');
+  else if (g.result === 0) out.push('상대가 5목을 완성하며 끝났어요.');
+  const A = g.A; const att = (A.goods.attack || []).length + (A.goods.win || []).length, def = (A.goods.block || []).length;
+  if (att + def >= 3) out.push(att > def * 1.5 ? `4·열린 3을 ${att}번 만든 공격적인 운영이었어요.` : def > att * 1.5 ? `상대 공격을 ${def}번 막아 낸 수비 위주의 운영이었어요.` : `공격 ${att}번, 수비 ${def}번으로 균형 잡힌 운영이었어요.`);
+  const t = timeStats(g);
+  if (t.avg != null) out.push(`한 수에 평균 ${t.avg.toFixed(1)}초를 썼어요.`);
+  return out.join(' ');
+}
+const PRESCRIBE = {
+  miss5: '내 차례가 오면 상대 수보다 먼저 "내가 5목·4를 만들 자리가 있나?"부터 확인하세요.',
+  missWin: '4와 3을 동시에 만드는 4-3 자리를 찾는 연습을 해 보세요. 연습 대국에서 낮은 단계 상대로 4-3을 만들어 이기는 것을 목표로 두어 보세요.',
+  miss4block: '두기 전 3초 점검: ① 상대 4가 있나? ② 상대 열린 3이 있나? ③ 내 4·4-3이 있나? 이 순서를 습관으로 만들어 보세요.',
+  miss3block: '두기 전 3초 점검: ① 상대 4가 있나? ② 상대 열린 3이 있나? ③ 내 4·4-3이 있나? 이 순서를 습관으로 만들어 보세요.',
+  allowDouble: '상대 돌 두 줄이 만나는 빈자리(급소)를 먼저 막는 연습을 해 보세요. 기보 다시 보기에서 "내 수 이후 예상 진행"을 눌러 상대가 노린 자리를 확인하면 도움이 돼요.',
+  missKey: '내 수를 두기 전에 "상대라면 어디에 둘까?"를 먼저 생각하고, 그 자리가 상대에게 3·4를 만들어 주는 곳이면 먼저 차지하세요.',
+  loseInitiative: '막기만 하지 말고, 막으면서 동시에 내 3을 만드는 "공수 겸장" 자리를 찾아보세요. 선수를 잡으면 상대가 계속 따라와야 해요.',
+  far: '돌이 모인 곳에서 2칸 안쪽을 먼저 살피세요. 멀리 떨어진 수는 대부분 손해예요.',
+  shape: '첫 5수는 가운데에서 내 돌끼리 1~2칸 간격으로 이어 두세요. 대각선과 가로세로가 함께 이어지는 모양이 좋아요.',
+};
+function buildSuggestions(A, games, ctx) {
+  const out = [], seen = new Set();
+  const add = t => { if (t && !seen.has(t) && out.length < 5) { seen.add(t); out.push(t); } };
+  Object.entries(A.codes).map(([c, l]) => ({ c, n: l.length, p: WEAK[c].p })).sort((a, b) => b.n * 10 + b.p - (a.n * 10 + a.p)).slice(0, 2).forEach(x => add(PRESCRIBE[x.c]));
+  const T = ctx.time;
+  if (T && T.bad != null && T.good != null && T.nBad >= 2 && T.bad < T.good * 0.7) add(`실수한 수는 평균 ${T.bad.toFixed(1)}초 만에 뒀어요(다른 수는 ${T.good.toFixed(1)}초). 상대 돌이 3개 이상 이어져 있으면 5초 더 생각하고 두세요.`);
+  else if (T && T.rush >= Math.max(4, T.n * 0.5)) add(`3초 안에 둔 수가 ${T.rush}번이었어요. 착수 버튼을 누르기 전에 상대의 다음 수를 한 번만 더 떠올려 보세요.`);
+  if (T && ctx.measure && T.late >= 2) add(`제한 시간에 쫓긴 수가 ${T.late}번 있었어요. 쉬운 장면은 빨리 두고 어려운 장면에 시간을 아껴 두세요.`);
+  const ph = Object.entries(A.ph).filter(([, v]) => v.length >= 3).map(([k, v]) => [k, mean(v)]).sort((a, b) => a[1] - b[1]);
+  if (ph.length >= 2 && ph[0][1] < 55) add({ early: '초반이 약해요. 첫 수는 가운데, 이후 내 돌 근처에 이어 두는 기본 포석부터 익혀 보세요.', mid: '중반 전투에서 흔들려요. 돌이 많아지면 상대의 3·4부터 확인하는 습관을 들이세요.', late: '종반 마무리가 약해요. 이길 수 있는 4-3·연속 4 수순을 찾는 연습을 해 보세요.' }[ph[0][0]]);
+  if (ctx.practiceLevel) add(ctx.practiceLevel);
+  if (ctx.nextGoal) add(ctx.nextGoal);
+  if (!out.length) add('아주 안정적으로 두었어요. 한 단계 높은 상대와 연습해서 실력을 더 키워 보세요.');
+  return out;
+}
+function practiceAdvice(g) {
+  const lv = g.level, acc = g.A.acc;
+  if (g.result === 1 && (acc == null || acc >= 65) && lv < 7) return `다음 연습은 ${lv + 1}단계(${LEVELS[lv + 1].name}) 상대에 도전해 보세요.`;
+  if (g.result === 0 && acc != null && acc < 50 && lv > 1) return `${lv - 1}단계(${LEVELS[lv - 1].name}) 상대로 실수 없이 이기는 연습부터 해 보세요.`;
+  return `${lv}단계(${LEVELS[lv].name}) 상대와 몇 판 더 두며 위의 점을 연습해 보세요.`;
+}
+function drawWinChart(cv, g, cur) {
+  const r = cv.getBoundingClientRect(); if (!r.width) return; const dpr = window.devicePixelRatio || 1;
+  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+  const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = r.width, H = r.height, padL = 30, padR = 8, padT = 8, padB = 18;
+  const n = Math.max(2, g.moves.length);
+  const X = k => padL + (W - padL - padR) * (k - 1) / (n - 1), Y = w => padT + (H - padT - padB) * (1 - w);
+  c.clearRect(0, 0, W, H);
+  c.font = '10px "Gothic A1",sans-serif'; c.fillStyle = '#a1978a'; c.textAlign = 'right'; c.textBaseline = 'middle';
+  [[1, '100%'], [.5, '50%'], [0, '0%']].forEach(([w, t]) => { c.fillText(t, padL - 5, Y(w)); c.strokeStyle = w === .5 ? 'rgba(201,164,92,.45)' : 'rgba(255,255,255,.08)'; c.setLineDash(w === .5 ? [4, 4] : []); c.beginPath(); c.moveTo(padL, Y(w)); c.lineTo(W - padR, Y(w)); c.stroke(); });
+  c.setLineDash([]);
+  const pts = [[1, .5]].concat(g.recs.filter(rc => wAfterOf(rc) != null && rc.ply >= 0).map(rc => [rc.ply + 1, Math.max(0, Math.min(1, wAfterOf(rc)))]));
+  if (g.result === 1) pts.push([g.moves.length, 1]); else if (g.result === 0) pts.push([g.moves.length, 0]);
+  const grd = c.createLinearGradient(0, padT, 0, H - padB); grd.addColorStop(0, 'rgba(201,164,92,.35)'); grd.addColorStop(1, 'rgba(201,164,92,0)');
+  c.beginPath(); pts.forEach(([k, w], i) => i ? c.lineTo(X(k), Y(w)) : c.moveTo(X(k), Y(w))); c.lineTo(X(pts[pts.length - 1][0]), Y(0)); c.lineTo(X(1), Y(0)); c.closePath(); c.fillStyle = grd; c.fill();
+  c.beginPath(); pts.forEach(([k, w], i) => i ? c.lineTo(X(k), Y(w)) : c.moveTo(X(k), Y(w))); c.strokeStyle = '#e6c98a'; c.lineWidth = 2; c.stroke();
+  g.recs.forEach(rc => { const s = sev(rc.loss || 0); if (s !== 'b' && s !== 'm') return; const w = wAfterOf(rc); if (w == null) return; c.fillStyle = s === 'b' ? '#d4483d' : '#d9a05b'; c.beginPath(); c.arc(X(rc.ply + 1), Y(w), 4, 0, 7); c.fill(); });
+  (g.hl || []).forEach(h => { const rc = g.recs.find(x => x.ply === h.ply); const w = rc && wAfterOf(rc); if (w == null) return; c.fillStyle = '#7fb89a'; c.beginPath(); c.arc(X(h.ply + 1), Y(w), 4, 0, 7); c.fill(); });
+  if (cur > 0) { c.strokeStyle = 'rgba(236,227,208,.6)'; c.lineWidth = 1; c.beginPath(); c.moveTo(X(cur), padT); c.lineTo(X(cur), H - padB); c.stroke(); }
+  c.fillStyle = '#a1978a'; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.fillText('1수', X(1) + 8, H - 4); c.fillText(`${g.moves.length}수`, X(n) - 10, H - 4);
+  cv._map = { X, n, padL, padR, W };
+}
+
+// ───────────────────────── 대국 종료 ─────────────────────────
+async function endGame(result, reason) {
+  const g = S.g; if (g.over) return; g.over = true; stopTimer(); g.preview = null; setTurn(null); redraw();
+  $('g-timer').classList.remove('low');
+  status((result === 1 ? '<b>승리!</b>' : result === 0 ? `<b>패배</b>${reason === '시간패' ? ' (시간 초과)' : reason === '기권' ? ' (기권)' : ''}` : '<b>무승부</b>') + ' · 수를 분석하는 중', true);
+  for (const r of g.recs) if (r.loss == null) { try { const b = r.before ? await r.before : null; r.wBest = b ? b.winrate : null; r.best = b ? b.move : null; r.pvBest = b ? b.pv : null; } catch (e) {} r.loss = 0; }
+  const A = analyzeGame(g); g.A = A; g.result = result; g.reason = reason;
+  const sw = strengthsWeaknesses(A); g.sw = sw; g.hl = highlights(g);
+  const rec = {
+    t: 'game', rid: g.id, mode: g.mode === 'measure' ? '측정' : '연습', run: S.runId || '', no: g.idx + 1, lv: g.level,
+    color: g.userBlack ? '흑' : '백', res: result === 1 ? '승' : result === 0 ? '패' : '무', why: reason, mv: g.moves.length,
+    acc: A.acc == null ? '' : Math.round(A.acc), match: A.match.n ? Math.round(A.match.ok / A.match.n * 100) : '',
+    bl: A.blunders, mi: A.mistakes, ia: A.inacc, ph: phaseStr(A).replace(/ /g, ''), str: midSW(sw.s), weak: midSW(sw.w),
+    kifu: g.moves.map(coord).join('.'), at: g.startedAt, ver: APP_VER,
+  };
+  queuePush(rec);
+  if (g.mode === 'measure') {
+    S.games.push(g);
+    let d = result === 1 ? 1 : result === 0 ? -1 : 0;
+    if (result === 1 && A.acc != null && A.acc >= 85) d = 2;
+    if (result === 0 && A.acc != null && A.acc < 45 && reason !== '시간패') d = -2;
+    S.level = Math.max(1, Math.min(7, S.level + d));
+  } else S.practiceCount++;
+  status(result === 1 ? '<b>승리!</b>' : result === 0 ? `<b>패배</b>${reason === '시간패' ? ' · 시간 초과' : reason === '기권' ? ' · 기권' : ''}` : '<b>무승부</b>');
+  await sleep(400);
+  gameEndModal(g);
+}
+
+function gameEndModal(g) {
+  const A = g.A, measuring = g.mode === 'measure';
+  const last = measuring && S.games.length >= S.nGames;
+  const rt = g.result === 1 ? '<span class="win">승리</span>' : g.result === 0 ? `<span class="loss">패배</span>` : '무승부';
+  const why = g.reason === '시간패' ? ' <span class="muted" style="font-size:14px">(시간 초과)</span>' : g.reason === '기권' ? ' <span class="muted" style="font-size:14px">(기권)</span>' : '';
+  const next = measuring ? (last ? '결과 보기' : '다음 판') : '한 판 더';
+  if (last) queueRatingIfDone();
+  modal(`<div class="m-title">${measuring ? `${g.idx + 1}판 ` : '연습 '}${rt}${why}</div>
+    <div class="kv"><span>정확도</span><b>${A.acc == null ? '-' : Math.round(A.acc) + '점'}</b></div>
+    <div class="kv"><span>악수 / 실수 / 아쉬운 수</span><b>${A.blunders} / ${A.mistakes} / ${A.inacc}</b></div>
+    ${measuring && !last ? `<div class="kv"><span>다음 상대</span><b>${S.level}단계</b></div>` : ''}
+    <button class="btn dark" id="em-review">대국 분석 보기</button>
+    <a class="btn" id="em-next" role="button">${next}</a>
+    ${measuring ? '' : `<a class="btn ghost" id="em-home" role="button">처음으로</a>`}
+    ${SUBMIT_URL ? (AUTO_SUBMIT ? '<div class="hint" style="text-align:center;margin-top:10px">기록은 선생님께 자동으로 저장돼요 ✓</div>' : '<div class="hint" style="text-align:center;margin-top:10px">버튼을 누르면 기록이 선생님께 자동 저장돼요.<br>저장 창이 새로 열리면 닫고 이 화면으로 돌아오세요.</div>') : ''}`);
+  const cont = () => { closeModal(); if (measuring) { last ? showResult() : startGame(); } else startGame(); };
+  autoSubmit($('em-next'), cont);
+  $('em-review').onclick = () => { closeModal(); openReview(g, () => gameEndModal(g)); };
+  if (!measuring) {
+    autoSubmit($('em-home'), () => { closeModal(); show('scr-start'); });
+  }
+}
+
+// ───────────────────────── 대국 분석 화면 ─────────────────────────
+let RV = null;
+function openReview(g, onDone) {
+  const A = g.A;
+  RV = { g, k: g.moves.length, onDone, pv: null };
+  $('rv-title').textContent = g.mode === 'measure' ? `측정 ${g.idx + 1}판 분석` : '연습 대국 분석';
+  $('rv-res').textContent = `${g.userBlack ? '흑' : '백'} · ${g.level}단계 · ${g.result === 1 ? '승' : g.result === 0 ? '패' : '무'}`;
+  $('rv-acc').textContent = A.acc == null ? '-' : Math.round(A.acc) + '점';
+  $('rv-match').textContent = pct(A.match);
+  $('rv-mist').textContent = `${A.blunders} / ${A.mistakes} / ${A.inacc}`;
+  $('rv-phase').textContent = phaseStr(A);
+  $('rv-str').innerHTML = g.sw.s.map(t => `<li>${esc(t)}</li>`).join('');
+  $('rv-weak').innerHTML = g.sw.w.map(t => `<li>${esc(t)}</li>`).join('');
+  const T = timeStats(g); $('rv-time').textContent = T.avg == null ? '-' : `${T.avg.toFixed(1)}초`;
+  if (!g.hl) g.hl = highlights(g);
+  $('rv-summary').textContent = gameSummary(g);
+  $('rv-sugg').innerHTML = buildSuggestions(A, 1, { time: T, measure: g.mode === 'measure', practiceLevel: g.mode === 'practice' ? practiceAdvice(g) : null }).map(t => `<li>${esc(t)}</li>`).join('');
+  const chips = A.list.filter(x => x.sev !== 'i' || A.list.length <= 8).slice(0, 14);
+  const allChips = chips.map(x => ({ ply: x.ply, html: `<button class="chip ${x.sev}" data-p="${x.ply}">${x.ply + 1}수 ${SEVNAME[x.sev]} −${Math.round(x.loss * 100)}%</button>` }))
+    .concat((g.hl || []).map(h => ({ ply: h.ply, html: `<button class="chip g" data-p="${h.ply}">${h.ply + 1}수 ${h.label} 👍</button>` }))).sort((a, b) => a.ply - b.ply);
+  $('rv-chips').innerHTML = allChips.length ? allChips.map(x => x.html).join('') : '<span class="muted" style="font-size:13.5px">표시할 장면이 없어요</span>';
+  $('rv-chips').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; RV.pv = null; rvGo(+b.dataset.p + 1); };
+  show('scr-review'); RB.resize();
+  const wc = $('wr-chart'); wc.onclick = e => { const m = wc._map; if (!m) return; const rr = wc.getBoundingClientRect(); const k = Math.round((e.clientX - rr.left - m.padL) / (m.W - m.padL - m.padR) * (m.n - 1)) + 1; rvGo(Math.max(1, Math.min(g.moves.length, k))); };
+  rvGo(chips.length ? chips[0].ply + 1 : g.moves.length);
+}
+function rvGo(k) {
+  const g = RV.g; k = Math.max(0, Math.min(g.moves.length, k));
+  if (k !== RV.k && RV.k !== -1) RV.pv = null; RV.k = k;
+  const ply = k - 1; const rec = g.recs.find(r => r.ply === ply);
+  const st = { moves: g.moves, upto: k, numbers: true };
+  let note = '';
+  if (k === 0) note = '처음 상태예요. ▶ 를 눌러 한 수씩 볼 수 있어요.';
+  else if (rec) {
+    const ex = explainMove(g, rec);
+    const s = sev(rec.loss || 0);
+    const wB = Math.round((rec.wBest || 0) * 100), wA = Math.round((rec.wAfter != null ? rec.wAfter : (rec.wBest || 0) - (rec.loss || 0)) * 100);
+    st.ring = rec.move; if (rec.best) st.best = rec.best;
+    let head;
+    if (!rec.best) head = `<b>${k}수 · 내 수</b>`;
+    else if (same(rec.best, rec.move)) head = `<b>${k}수 · 내 수</b> — AI 최선수(${coord(rec.best)})와 같아요 👍`;
+    else if (s) head = `<b>${k}수 · 내 수 · ${SEVNAME[s]}</b> — 승률 ${wB}% → ${wA}% (−${wB - wA}%p)`;
+    else if (ex.decided) head = `<b>${k}수 · 내 수</b> — 이미 기운 국면 · AI 최선수 ${coord(rec.best)}`;
+    else head = `<b>${k}수 · 내 수</b> — 좋은 수 (차이 ${Math.max(0, wB - wA)}%p) · AI 최선수 ${coord(rec.best)}`;
+    const why = ex.reasons.map(t => `<div class="why ${s && !same(rec.best, rec.move) ? 'bad' : 'good'}">${esc(t)}</div>`).join('');
+    // 예상 수순
+    const hasBest = rec.pvBest && rec.pvBest.length > 1 && !same(rec.best, rec.move);
+    const hasAfter = rec.pvAfter && rec.pvAfter.length;
+    let pvBtns = '';
+    if (hasBest || hasAfter) {
+      pvBtns = `<div class="pvbtns">${hasAfter ? `<button data-pv="after" class="${RV.pv === 'after' ? 'on' : ''}">내 수 이후 예상 진행</button>` : ''}${hasBest ? `<button data-pv="best" class="${RV.pv === 'best' ? 'on' : ''}">AI 추천 수순</button>` : ''}</div>`;
+    }
+    if (RV.pv === 'after' && hasAfter) { st.pv = { moves: rec.pvAfter.slice(0, 6), startBlack: (rec.ply + 1) % 2 === 0, start: rec.ply + 2 }; st.best = null; }
+    if (RV.pv === 'best' && hasBest) { st.pv = { moves: rec.pvBest.slice(0, 6), startBlack: rec.ply % 2 === 0, start: rec.ply + 1 }; st.upto = k - 1; st.ring = null; st.best = null; }
+    const pvNote = st.pv ? `<div class="hint" style="margin-top:6px">${RV.pv === 'best' ? `내 수 대신 ${coord(rec.best)}부터 둔 AI의 예상 진행이에요.` : '내 수 다음에 예상되는 진행이에요.'} 점선 테두리 돌이 예상 수이고, 숫자는 이어지는 수 번호예요.</div>` : '';
+    const tnote = rec.ms != null ? `<div class="hint" style="margin-top:6px">생각한 시간 ${(rec.ms / 1000).toFixed(1)}초</div>` : '';
+    note = head + why + tnote + pvBtns + pvNote;
+  } else note = `<b>${k}수 · AI</b>`;
+  if (k === g.moves.length && g.winLine && !st.pv) st.winLine = g.winLine;
+  RB.state = st; RB.draw(); $('rv-note').innerHTML = note; drawWinChart($('wr-chart'), g, k);
+  $('rv-note').querySelectorAll('.pvbtns button').forEach(b => b.onclick = () => { RV.pv = RV.pv === b.dataset.pv ? null : b.dataset.pv; const kk = RV.k; RV.k = -1; rvGo(kk); });
+  [...$('rv-chips').children].forEach(c => c.classList && c.classList.toggle('on', +c.dataset.p === ply));
+}
+$('rv-first').onclick = () => rvGo(0);
+$('rv-prev').onclick = () => rvGo(RV.k - 1);
+$('rv-next').onclick = () => rvGo(RV.k + 1);
+$('rv-last').onclick = () => rvGo(RV.g.moves.length);
+$('rv-done').onclick = () => { const f = RV.onDone; RV = null; f && f(); };
+
+// ───────────────────────── 측정 결과 ─────────────────────────
+function computeRating() {
+  const G = S.games;
+  let best = PRIOR_MEAN, bestLp = -Infinity; const lps = [];
+  for (let R = 0; R <= 3000; R += 5) {
+    let lp = -0.5 * ((R - PRIOR_MEAN) / PRIOR_SD) ** 2;
+    for (const g of G) { const e = 1 / (1 + Math.pow(10, (LEVELS[g.level].rating - R) / 400)); lp += g.result * Math.log(e) + (1 - g.result) * Math.log(1 - e); }
+    lps.push([R, lp]); if (lp > bestLp) { bestLp = lp; best = R; }
+  }
+  let z = 0, m = 0, v = 0; for (const [R, lp] of lps) { const p = Math.exp(lp - bestLp); z += p; m += p * R; } m /= z;
+  for (const [R, lp] of lps) { const p = Math.exp(lp - bestLp); v += p * (R - m) ** 2; } const sdPerf = Math.sqrt(v / z);
+  const M = mergeA(G.map(g => g.A));
+  const acc = M.acc == null ? 50 : M.acc;
+  const rAcc = accToRating(acc);
+  const score = Math.round(W_PERF * best + W_ACC * rAcc);
+  return { perf: best, acc, rAcc, score, range: Math.round(W_PERF * sdPerf + 60), tier: tierOf(score), M };
+}
+
+function showResult() {
+  const r = computeRating(); const G = S.games; S.lastRating = r;
+  const sw = strengthsWeaknesses(r.M, G.length);
+  const w = G.filter(g => g.result === 1).length, l = G.filter(g => g.result === 0).length, d = G.length - w - l;
+  $('r-name').textContent = `${S.sid} ${S.name} · 측정 결과`;
+  $('r-score').textContent = r.score; $('r-tier').textContent = r.tier;
+  const TC = { '입문': '#8a8378', '초급': '#7fb89a', '중급': '#8fb4e8', '중상급': '#b9a0d8', '상급': '#d9a05b', '고수': '#e6c98a', '최상급': 'linear-gradient(90deg,#e6c98a,#c9a45c,#d4483d)' };
+  $('r-tier').style.background = TC[r.tier] || ''; $('r-tier').style.color = '#12100e';
+  $('r-range').textContent = `오차 범위 약 ±${r.range}점 · 렌주룰 ${G.length}판`;
+  $('r-perf').textContent = r.perf + '점';
+  $('r-acc').textContent = Math.round(r.acc) + '점 (환산 ' + r.rAcc + ')';
+  $('r-match').textContent = pct(r.M.match);
+  $('r-record').textContent = `${w}승 ${l}패${d ? ' ' + d + '무' : ''}`;
+  $('r-mist').textContent = `${r.M.blunders} / ${r.M.mistakes} / ${r.M.inacc}`;
+  $('r-str').innerHTML = sw.s.map(t => `<li>${esc(t)}</li>`).join('');
+  $('r-weak').innerHTML = sw.w.map(t => `<li>${esc(t)}</li>`).join('');
+  { const Tall = (() => { const all = G.map(timeStats); const pick = k => { const v = all.filter(x => x[k] != null); return v.length ? mean(v.map(x => x[k])) : null; };
+      return { avg: pick('avg'), bad: pick('bad'), good: pick('good'), nBad: all.reduce((a, x) => a + x.nBad, 0), rush: all.reduce((a, x) => a + x.rush, 0), late: all.reduce((a, x) => a + x.late, 0), n: all.reduce((a, x) => a + x.n, 0) }; })();
+    let rec = 1; for (let i = 1; i <= 7; i++) if (Math.abs(LEVELS[i].rating - (r.score + 150)) < Math.abs(LEVELS[rec].rating - (r.score + 150))) rec = i;
+    const nt = TIERS.find(t => t[0] > r.score);
+    $('r-sugg').innerHTML = buildSuggestions(r.M, G.length, { time: Tall, measure: true,
+      practiceLevel: `연습 추천 상대: ${rec}단계(${LEVELS[rec].name}) — 지금 실력보다 조금 강한 상대라 실력이 가장 빨리 늘어요.`,
+      nextGoal: nt ? `다음 등급 '${nt[1]}'까지 ${nt[0] - r.score}점 남았어요. 위의 점을 연습한 뒤 다시 측정해 보세요.` : '최고 등급이에요! 기록을 지키려면 최강 단계와 연습해 보세요.' }).map(t => `<li>${esc(t)}</li>`).join(''); }
+  $('r-table').innerHTML = G.map((g, i) => `<tr class="click" data-i="${i}"><td>${i + 1}</td><td>${g.userBlack ? '흑' : '백'}</td><td>${g.level}단계</td>
+    <td class="${g.result === 1 ? 'win' : g.result === 0 ? 'loss' : ''}">${g.result === 1 ? '승' : g.result === 0 ? (g.reason === '시간패' ? '시간패' : '패') : '무'}</td>
+    <td>${g.moves.length}</td><td>${g.A.acc == null ? '-' : Math.round(g.A.acc)}</td></tr>`).join('');
+  $('r-table').onclick = e => { const tr = e.target.closest('tr'); if (!tr) return; openReview(G[+tr.dataset.i], () => show('scr-result')); };
+  const detail = G.map((g, i) => `${i + 1}:${g.userBlack ? '흑' : '백'}/${g.level}단계/${g.result === 1 ? '승' : g.result === 0 ? (g.reason === '시간패' ? '시간패' : '패') : '무'}/${g.A.acc == null ? '-' : Math.round(g.A.acc)}`).join(' ');
+  queueRatingIfDone();
+  { const h = store.get('hist', []).filter(x => !x.sid || x.sid === S.sid); const avg = h.length ? Math.round(h.reduce((a, x) => a + x.score, 0) / h.length) : r.score;
+    $('r-hist').textContent = `${h.length || 1}회 · 평균 ${avg}점`; }
+  S.lastText = [`[오목의 신] ${S.sid} ${S.name}`, `점수 ${r.score} (${r.tier}, ±${r.range}) · 렌주룰`,
+    `대국 성적 ${r.perf} · 정확도 ${Math.round(r.acc)} · ${w}승 ${l}패${d ? ' ' + d + '무' : ''}`, `강점: ${sw.s.join(' / ')}`, `보완: ${sw.w.join(' / ')}`,
+    ...detail.split(' ').map(x => x.replace(/^(\d+):/, '$1판 ')), '© 제작: 인제고 수학 교사 김수영'].join('\n');
+  const a = $('btn-submit');
+  if (SUBMIT_URL) { a.classList.remove('hidden'); $('submit-hint').classList.remove('hidden'); setSubmitLink(a, '선생님께 결과 제출', refreshResultSubmit);
+    $('submit-hint').textContent = AUTO_SUBMIT ? (S.queue.length ? '인터넷 연결을 확인하고 다시 시도해 주세요.' : '기록이 선생님께 자동으로 저장됐어요.') : (S.queue.length ? "새 창에 '저장 완료'가 보이면 끝이에요. 창을 닫고 이 화면으로 돌아오세요." : '기록은 이미 선생님께 자동 저장됐어요.');
+    if (AUTO_SUBMIT && S.queue.length) flushQueue().then(() => setTimeout(refreshResultSubmit, 800)); }
+  else { a.classList.add('hidden'); $('submit-hint').classList.add('hidden'); }
+  show('scr-result');
+}
+function queueRatingIfDone() {
+  const G = S.games;
+  if (S.mode !== 'measure' || G.length < S.nGames || S.ratingQueued === S.runId) return;
+  const r = computeRating(); const sw = strengthsWeaknesses(r.M, G.length);
+  const w = G.filter(g => g.result === 1).length, l = G.filter(g => g.result === 0).length, d = G.length - w - l;
+  const detail = G.map((g, i) => `${i + 1}:${g.userBlack ? '흑' : '백'}/${g.level}단계/${g.result === 1 ? '승' : g.result === 0 ? (g.reason === '시간패' ? '시간패' : '패') : '무'}/${g.A.acc == null ? '-' : Math.round(g.A.acc)}`).join(' ');
+  queuePush({ t: 'rating', rid: S.runId, score: r.score, tier: r.tier, range: r.range, perf: r.perf, acc: Math.round(r.acc),
+    match: r.M.match.n ? Math.round(r.M.match.ok / r.M.match.n * 100) : '', w, l, d, games: G.length, start: S.startLevel,
+    mist: `${r.M.blunders}/${r.M.mistakes}/${r.M.inacc}`, str: midSW(sw.s), weak: midSW(sw.w), detail, at: S.runAt, ver: APP_VER });
+  S.ratingQueued = S.runId;
+  const h = store.get('hist', []); h.push({ at: S.runAt, score: r.score, tier: r.tier, sid: S.sid }); store.set('hist', h.slice(-30));
+}
+// 학생이 어차피 누르는 버튼에 기록 제출을 함께 붙임 (앱 보안 정책상 버튼 클릭으로만 전송 가능)
+function autoSubmit(a, cont) {
+  if (AUTO_SUBMIT) { a.removeAttribute('href'); a.removeAttribute('target'); a.onclick = e => { e.preventDefault(); flushQueue(); cont(); }; return; }
+  if (!SUBMIT_URL || !S.queue.length) { a.removeAttribute('href'); a.removeAttribute('target'); a.onclick = e => { e.preventDefault(); cont(); }; return; }
+  const { chunk, url } = nextChunk();
+  a.href = url; a.target = '_blank'; a.rel = 'noopener';
+  a.onclick = () => { const ids = new Set(chunk.map(r => r.rid)); S.queue = S.queue.filter(r => !ids.has(r.rid)); store.set('queue', S.queue); setTimeout(cont, 60); };
+}
+function refreshResultSubmit() { if (SUBMIT_URL) { setSubmitLink($('btn-submit'), '선생님께 결과 제출', refreshResultSubmit); $('submit-hint').textContent = AUTO_SUBMIT ? (S.queue.length ? '인터넷 연결을 확인하고 다시 시도해 주세요.' : '기록이 선생님께 자동으로 저장됐어요.') : (S.queue.length ? "새 창에 '저장 완료'가 보이면 끝이에요. 창을 닫고 이 화면으로 돌아오세요." : '기록은 이미 선생님께 저장됐어요.'); } }
+
+$('btn-copy').onclick = async () => {
+  try { await navigator.clipboard.writeText(S.lastText); toast('결과를 복사했어요'); }
+  catch (e) { modal(`<b>아래 내용을 길게 눌러 복사하세요</b><textarea style="width:100%;height:170px;margin:10px 0;font:inherit;font-size:13px">${esc(S.lastText)}</textarea><button class="btn" onclick="closeModal()">닫기</button>`); }
+};
+$('btn-again').onclick = () => { $('btn-measure').click(); };
+$('btn-go-practice').onclick = () => { show('scr-start'); setModeTab('practice'); setTimeout(() => $('tab-practice').scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); };
+$('btn-home').onclick = () => show('scr-start');
+
+// ───────────────────────── 기록 제출 (구글 시트) ─────────────────────────
+function queuePush(rec) { S.queue.push(Object.assign({ sid: S.sid, name: S.name }, rec)); store.set('queue', S.queue); if (AUTO_SUBMIT) flushQueue(); }
+async function flushQueue() {
+  if (!AUTO_SUBMIT || !SUBMIT_URL || flushQueue.busy) return; flushQueue.busy = true;
+  try {
+    for (let guard = 0; S.queue.length && guard < 20; guard++) {
+      const { chunk, url } = nextChunk();
+      await fetch(url, { mode: 'no-cors', cache: 'no-store', keepalive: url.length < 60000 });
+      const ids = new Set(chunk.map(r => r.rid)); S.queue = S.queue.filter(r => !ids.has(r.rid)); store.set('queue', S.queue);
+    }
+  } catch (e) { /* 오프라인 등: 다음 기회에 다시 보냄 */ }
+  finally { flushQueue.busy = false; }
+}
+const MAX_URL = 9000;
+function nextChunk() {
+  const chunk = []; let url = '';
+  const ordered = S.queue.filter(r => r.t === 'rating').concat(S.queue.filter(r => r.t !== 'rating'));
+  for (const r of ordered) {
+    const tryRecs = chunk.concat([r]);
+    const u = SUBMIT_URL + '?d=' + encodeURIComponent(JSON.stringify({ v: APP_VER, recs: tryRecs }));
+    if (u.length > MAX_URL && chunk.length) break;
+    chunk.push(r); url = u;
+    if (u.length > MAX_URL) break;
+  }
+  return { chunk, url };
+}
+function setSubmitLink(a, label, after) {
+  if (AUTO_SUBMIT) {
+    a.removeAttribute('href'); a.removeAttribute('target');
+    if (!S.queue.length) { a.textContent = '자동 저장 완료 ✓'; a.style.opacity = .6; a.onclick = e => e.preventDefault(); }
+    else { a.textContent = `저장 다시 시도 (${S.queue.length}건)`; a.style.opacity = 1; a.onclick = e => { e.preventDefault(); a.textContent = '저장 중…'; flushQueue().then(() => setTimeout(() => after && after(), 300)); }; }
+    return;
+  }
+  const n = S.queue.length;
+  if (!n) { a.removeAttribute('href'); a.textContent = '제출 완료 ✓'; a.style.opacity = .6; a.onclick = e => { e.preventDefault(); toast('제출할 기록이 없어요'); }; return; }
+  const { chunk, url } = nextChunk();
+  a.href = url; a.style.opacity = 1;
+  a.textContent = n > chunk.length ? `${label} (${chunk.length}/${n}건)` : (n > 1 ? `${label} (${n}건)` : label);
+  a.onclick = () => {
+    const ids = new Set(chunk.map(r => r.rid));
+    setTimeout(() => {
+      S.queue = S.queue.filter(r => !ids.has(r.rid)); store.set('queue', S.queue);
+      toast(S.queue.length ? `남은 기록 ${S.queue.length}건 · 한 번 더 눌러 주세요` : '제출했어요. 새 창에서 저장 완료를 확인하세요');
+      after && after();
+    }, 400);
+  };
+}
+
+if (AUTO_SUBMIT) flushQueue().then(renderHome);
+renderHome();
+</script>
+</body>
+</html>
