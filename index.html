@@ -441,7 +441,8 @@
       · <b>대국 성적 점수</b>: 상대 단계(점수가 정해진 AI)와의 승패로 계산한 Elo 방식 추정치<br>
       · <b>수 정확도</b>: 내가 둔 수마다 AI의 최선수와 비교해 승률을 얼마나 잃었는지로 매긴 0~100점<br>
       · <b>최종 점수</b> = 대국 성적 60% + 정확도 환산 점수 40%<br>
-      · 이미 진 국면(승률 3% 미만)의 수는 정확도 계산에서 뺍니다.<br>
+      · 점수에 쓰는 정확도는 승부가 팽팽한 장면(승률 10~90%)의 수만 반영합니다. 이미 크게 기운 장면의 수는 뺍니다.<br>
+      · 같은 정확도라도 강한 상대와 둔 판은 더 높게, 약한 상대와 둔 판은 더 낮게 환산합니다.<br>
       · AI 단계 점수는 엔진끼리의 대국으로 정한 잠정값입니다.
     </div>
     <div class="credit">© 2026 제작: 인제고 수학 교사 김수영</div>
@@ -456,7 +457,7 @@
 // ───────────────────────── 설정 ─────────────────────────
 const N = 15;
 const SUBMIT_URL = 'https://script.google.com/macros/s/AKfycbyca5Lj9VkL7RzK5yjcJJ0u6u6sFQudTWIeK2pOwgGQkfKs7Z-953dhJegbwT6mldrx/exec';
-const APP_VER = '3.0';
+const APP_VER = '3.1';
 // Claude 아티팩트(보안 정책으로 전송 차단)가 아닌 곳(GitHub Pages 등)에서는 기록을 백그라운드로 자동 저장
 const AUTO_SUBMIT = !/(claudeusercontent\.com|claude\.ai)$/.test(location.hostname);
 const MOVE_SEC = 30;              // 측정 모드 한 수당 제한 시간(초)
@@ -496,6 +497,9 @@ const LEVELS = [
 const PRIOR_MEAN = 1100, PRIOR_SD = 400;
 const W_PERF = 0.6, W_ACC = 0.4;
 const accToRating = a => Math.round(Math.max(0, Math.min(2600, 1100 + (a - 50) * 27)));
+// 측정 점수용 정확도: 승부가 팽팽한 장면(승률 10~90%)의 수만 반영하고, 상대 강도를 보정
+const BAL_LO = 0.10, BAL_HI = 0.90, OPP_K = 0.25, BAL_MIN = 4;
+const oppAdj = lv => Math.round(OPP_K * (LEVELS[lv].rating - 1100));
 const TIERS = [[0,'입문'],[800,'초급'],[1100,'중급'],[1400,'중상급'],[1700,'상급'],[2000,'고수'],[2300,'최상급']];
 const tierOf = r => TIERS.filter(t => r >= t[0]).pop()[1];
 let ANALYSIS_NODES = 120000; const ANALYSIS_MS = 2500;
@@ -1140,7 +1144,7 @@ function explainMove(g, rec) {
 function analyzeGame(g) {
   const me = g.userBlack ? 1 : 2, opp = 3 - me;
   const A = { accs: [], match: { n: 0, ok: 0 }, def4: { n: 0, ok: 0 }, def3: { n: 0, ok: 0 }, five: { n: 0, ok: 0 }, conv: { n: 0, ok: 0 },
-              ph: { early: [], mid: [], late: [] }, blunders: 0, mistakes: 0, inacc: 0, list: [], codes: {}, goods: {}, gi: g.idx + 1, measure: g.mode === 'measure' };
+              ph: { early: [], mid: [], late: [] }, blunders: 0, mistakes: 0, inacc: 0, list: [], codes: {}, goods: {}, accsBal: [], gi: g.idx + 1, measure: g.mode === 'measure' };
   g.recs.forEach((r, k) => {
     if (r.loss == null) return;
     const b = grid(g.moves.slice(0, r.ply)), b2 = grid(g.moves.slice(0, r.ply + 1));
@@ -1156,6 +1160,7 @@ function analyzeGame(g) {
     if (ex.good) { (A.goods[ex.good] = A.goods[ex.good] || []).push({ k: r.ply + 1, g: A.gi, label: ex.label }); }
     if (!counted) return;
     const acc = moveAcc(r.loss); A.accs.push(acc);
+    if (r.wBest >= BAL_LO && r.wBest <= BAL_HI) A.accsBal.push(acc);
     if (r.best) { A.match.n++; if (same(r.best, r.move)) A.match.ok++; }
     if (r.wBest >= 0.9 && !myFive.length) { A.conv.n++; if (r.loss < 0.2) A.conv.ok++; }
     (k < 5 ? A.ph.early : k < 12 ? A.ph.mid : A.ph.late).push(acc);
@@ -1464,8 +1469,17 @@ function computeRating() {
   let z = 0, m = 0, v = 0; for (const [R, lp] of lps) { const p = Math.exp(lp - bestLp); z += p; m += p * R; } m /= z;
   for (const [R, lp] of lps) { const p = Math.exp(lp - bestLp); v += p * (R - m) ** 2; } const sdPerf = Math.sqrt(v / z);
   const M = mergeA(G.map(g => g.A));
-  const acc = M.acc == null ? 50 : M.acc;
-  const rAcc = accToRating(acc);
+  // 판별: 팽팽한 장면의 정확도(부족하면 전체 정확도) → 환산 점수 + 상대 강도 보정, 반영 수 개수로 가중 평균
+  let wSum = 0, aSum = 0, rSum = 0;
+  for (const g of G) {
+    const A = g.A, useBal = A.accsBal.length >= BAL_MIN;
+    const list = useBal ? A.accsBal : A.accs;
+    const a = list.length ? mean(list) : 50, w = Math.max(1, list.length);
+    const ra = Math.max(0, Math.min(2600, accToRating(a) + oppAdj(g.level)));
+    g.accBal = a; g.rAccG = ra; wSum += w; aSum += a * w; rSum += ra * w;
+  }
+  const acc = wSum ? aSum / wSum : 50;
+  const rAcc = wSum ? Math.round(rSum / wSum) : accToRating(50);
   const score = Math.round(W_PERF * best + W_ACC * rAcc);
   return { perf: best, acc, rAcc, score, range: Math.round(W_PERF * sdPerf + 60), tier: tierOf(score), M };
 }
