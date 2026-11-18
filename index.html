@@ -43,7 +43,7 @@
   .hero-row{display:flex;align-items:flex-start;gap:14px}
   .seal{flex:none;width:58px;height:58px;margin-top:4px;background:var(--seal);color:#f6e6dc;border-radius:5px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:900;font-size:34px;line-height:1;box-shadow:inset 0 0 0 3px var(--seal),inset 0 0 0 4.5px rgba(246,230,220,.75);transform:rotate(-4deg)}
   .hero-kicker{font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:6px;color:var(--gold);margin:2px 0 6px}
-  .hero svg{display:block;width:100%;height:auto;border-radius:4px;margin-top:16px;box-shadow:0 0 0 1px #000,0 0 0 4px #2a2016,0 0 0 5px var(--hair),0 18px 40px rgba(0,0,0,.55)}
+  .hero > svg{display:block;width:100%;height:auto;border-radius:4px;margin-top:16px;box-shadow:0 0 0 1px #000,0 0 0 4px #2a2016,0 0 0 5px var(--hair),0 18px 40px rgba(0,0,0,.55)}
   .hero-text{margin-top:0}
 
   /* 선수 등록 */
@@ -176,6 +176,10 @@
   .foot{font-size:12px;color:var(--muted);line-height:1.7;margin-top:18px;position:relative}
   .foot a{color:var(--muted)}
   .credit{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);text-align:center;font-family:var(--display);font-weight:600;font-size:13px;color:var(--gold);letter-spacing:.5px}
+  .sndbar{display:inline-flex;gap:6px}
+  .snd{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--gold2);cursor:pointer;position:relative;padding:0}
+  .snd.off{color:#6f665b}
+  .snd.off:after{content:"";position:absolute;left:7px;right:7px;top:50%;height:2px;background:var(--seal2);transform:rotate(-40deg)}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-weight:800;padding:11px 18px;border-radius:4px;font-size:14px;z-index:20;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5)}
   .toast.show{opacity:1}
   .sw{list-style:none;padding:0;margin:0;position:relative}
@@ -218,6 +222,7 @@
   <section id="scr-start">
     <div class="hero">
       <div class="hero-mark" aria-hidden="true">神</div>
+      <div style="position:absolute;right:0;top:0;z-index:2"><span class="sndbar"><button class="snd snd-bgm" aria-label="배경음악"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg></button><button class="snd snd-sfx" aria-label="효과음"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></span></div>
       <div class="hero-row">
         <div class="seal" aria-hidden="true">神</div>
         <div class="hero-text">
@@ -338,6 +343,7 @@
     <div class="gtop">
       <div class="gtitle" id="g-title">측정 1 / 3판</div>
       <div class="row" style="flex:0 0 auto;gap:6px">
+        <span class="sndbar"><button class="snd snd-bgm" aria-label="배경음악"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l11-2v13" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="17" cy="16" r="3" fill="currentColor"/></svg></button><button class="snd snd-sfx" aria-label="효과음"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></span>
         <div class="pill timer hidden" id="g-timer">30</div>
         <div class="pill" id="g-level">상대 3단계</div>
       </div>
@@ -500,6 +506,105 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('omok_' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('omok_' + k, JSON.stringify(v)); } catch (e) {} },
 };
+
+// ───────────────────────── 소리 (Web Audio로 직접 합성 · 음원 파일 없음) ─────────────────────────
+const SND = { ctx: null, bgmOn: store.get('bgm', true), sfxOn: store.get('sfx', true), bgmTimer: null, drone: null, noise: null };
+function audioCtx() {
+  try {
+    if (!SND.ctx) {
+      const C = window.AudioContext || window.webkitAudioContext; if (!C) return null;
+      const c = SND.ctx = new C();
+      SND.master = c.createGain(); SND.master.gain.value = 0.9; SND.master.connect(c.destination);
+      // 잔향
+      const len = Math.floor(c.sampleRate * 2.4), buf = c.createBuffer(2, len, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) { const d = buf.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8); }
+      SND.rev = c.createConvolver(); SND.rev.buffer = buf; const rg = c.createGain(); rg.gain.value = 0.32; SND.rev.connect(rg); rg.connect(SND.master);
+      SND.bgmBus = c.createGain(); SND.bgmBus.gain.value = 0; SND.bgmBus.connect(SND.master); SND.bgmBus.connect(SND.rev);
+      SND.sfxBus = c.createGain(); SND.sfxBus.gain.value = 1; SND.sfxBus.connect(SND.master);
+      const nl = Math.floor(c.sampleRate * 0.12), nb = c.createBuffer(1, nl, c.sampleRate), nd = nb.getChannelData(0);
+      for (let i = 0; i < nl; i++) nd[i] = Math.random() * 2 - 1; SND.noise = nb;
+    }
+    if (SND.ctx.state === 'suspended') SND.ctx.resume();
+    return SND.ctx;
+  } catch (e) { return null; }
+}
+const hz = semi => 220 * Math.pow(2, semi / 12);   // A3 기준
+function pluck(freq, t, vol, dur, bus, wet) {
+  const c = SND.ctx; if (!c) return;
+  const o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
+  o.type = 'triangle'; o.frequency.value = freq; o2.type = 'sine'; o2.frequency.value = freq * 2.01;
+  const g2 = c.createGain(); g2.gain.value = 0.35;
+  f.type = 'lowpass'; f.frequency.setValueAtTime(freq * 6, t); f.frequency.exponentialRampToValueAtTime(freq * 1.5, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(f); o2.connect(g2); g2.connect(f); f.connect(g); g.connect(bus || SND.sfxBus); if (wet) g.connect(SND.rev);
+  o.start(t); o2.start(t); o.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
+}
+function sfxStone(byUser) {
+  if (!SND.sfxOn || !audioCtx()) return; const c = SND.ctx, t = c.currentTime;
+  const n = c.createBufferSource(); n.buffer = SND.noise; const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = byUser ? 2300 : 1900; bp.Q.value = 1.4;
+  const g = c.createGain(); g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+  n.connect(bp); bp.connect(g); g.connect(SND.sfxBus); n.start(t); n.stop(t + 0.1);
+  const o = c.createOscillator(), og = c.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(190, t); o.frequency.exponentialRampToValueAtTime(110, t + 0.08);
+  og.gain.setValueAtTime(0.55, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.1); o.connect(og); og.connect(SND.sfxBus); o.start(t); o.stop(t + 0.12);
+}
+function sfxTick(vol = 0.12, f = 1400) {
+  if (!SND.sfxOn || !audioCtx()) return; const c = SND.ctx, t = c.currentTime;
+  const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = f;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05); o.connect(g); g.connect(SND.sfxBus); o.start(t); o.stop(t + 0.06);
+}
+function sfxForbid() {
+  if (!SND.sfxOn || !audioCtx()) return; const c = SND.ctx, t = c.currentTime;
+  [0, 0.13].forEach(d => { const o = c.createOscillator(), g = c.createGain(); o.type = 'square'; o.frequency.value = 150;
+    g.gain.setValueAtTime(0.06, t + d); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.1); o.connect(g); g.connect(SND.sfxBus); o.start(t + d); o.stop(t + d + 0.12); });
+}
+function sfxResult(result) {
+  if (!SND.sfxOn || !audioCtx()) return; const t = SND.ctx.currentTime + 0.05;
+  if (result === 1) { [12, 14, 16, 19, 21, 24].forEach((s, i) => pluck(hz(s), t + i * 0.1, 0.32, 1.4, SND.sfxBus, true)); [24, 28, 31].forEach(s => pluck(hz(s), t + 0.7, 0.18, 2.4, SND.sfxBus, true)); }
+  else if (result === 0) { [19, 16, 14, 12, 7].forEach((s, i) => pluck(hz(s), t + i * 0.2, 0.26, 1.6, SND.sfxBus, true)); }
+  else { [12, 19, 24].forEach((s, i) => pluck(hz(s), t + i * 0.15, 0.24, 1.6, SND.sfxBus, true)); }
+}
+// 배경음악: 국악 오음계(라·도·레·미·솔) 가야금풍 퉁김 + 은은한 바탕음, 매번 새 가락
+const BGM_SCALE = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22, 24];
+function startBgm() {
+  if (!SND.bgmOn || !audioCtx() || SND.bgmTimer) return;
+  const c = SND.ctx, t = c.currentTime;
+  SND.bgmBus.gain.cancelScheduledValues(t); SND.bgmBus.gain.setValueAtTime(SND.bgmBus.gain.value, t); SND.bgmBus.gain.linearRampToValueAtTime(0.5, t + 2);
+  if (!SND.drone) {
+    const g = c.createGain(); g.gain.value = 0.05; g.connect(SND.bgmBus);
+    const lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = 0.08; lg.gain.value = 0.025; lfo.connect(lg); lg.connect(g.gain); lfo.start();
+    [hz(-12), hz(-5)].forEach(f => { const o = c.createOscillator(); o.type = 'sine'; o.frequency.value = f; o.connect(g); o.start(); });
+    SND.drone = g;
+  }
+  let idx = 4;
+  const step = () => {
+    if (!SND.bgmOn) { SND.bgmTimer = null; return; }
+    const now = c.currentTime;
+    idx = Math.max(0, Math.min(BGM_SCALE.length - 1, idx + [-2, -1, -1, 1, 1, 2, 0][Math.floor(Math.random() * 7)]));
+    pluck(hz(BGM_SCALE[idx]), now + 0.02, 0.16, 2.6, SND.bgmBus, true);
+    if (Math.random() < 0.3) pluck(hz(BGM_SCALE[Math.max(0, idx - 2)] - 12), now + 0.02, 0.09, 3.2, SND.bgmBus, true);
+    if (Math.random() < 0.18) pluck(hz(BGM_SCALE[idx]), now + 0.24, 0.1, 2.2, SND.bgmBus, true);
+    SND.bgmTimer = setTimeout(step, 900 + Math.random() * 1900);
+  };
+  step();
+}
+function stopBgm() {
+  if (SND.bgmTimer) { clearTimeout(SND.bgmTimer); SND.bgmTimer = null; }
+  if (SND.ctx && SND.bgmBus) { const t = SND.ctx.currentTime; SND.bgmBus.gain.cancelScheduledValues(t); SND.bgmBus.gain.setValueAtTime(SND.bgmBus.gain.value, t); SND.bgmBus.gain.linearRampToValueAtTime(0, t + 0.8); }
+}
+function renderSoundButtons() {
+  document.querySelectorAll('.snd-bgm').forEach(b => { b.classList.toggle('off', !SND.bgmOn); b.setAttribute('aria-pressed', SND.bgmOn); b.title = SND.bgmOn ? '배경음악 끄기' : '배경음악 켜기'; });
+  document.querySelectorAll('.snd-sfx').forEach(b => { b.classList.toggle('off', !SND.sfxOn); b.setAttribute('aria-pressed', SND.sfxOn); b.title = SND.sfxOn ? '효과음 끄기' : '효과음 켜기'; });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('.snd-bgm, .snd-sfx');
+  if (b) {
+    if (b.classList.contains('snd-bgm')) { SND.bgmOn = !SND.bgmOn; store.set('bgm', SND.bgmOn); SND.bgmOn ? startBgm() : stopBgm(); }
+    else { SND.sfxOn = !SND.sfxOn; store.set('sfx', SND.sfxOn); if (SND.sfxOn) sfxTick(0.15, 1200); }
+    renderSoundButtons(); return;
+  }
+  if (!SND.ctx) { audioCtx(); if (SND.bgmOn) startBgm(); }   // 첫 클릭 때 소리 시작 (브라우저 자동재생 정책)
+}, true);
+document.addEventListener('visibilitychange', () => { if (!SND.ctx) return; if (document.hidden) { stopBgm(); SND.ctx.suspend(); } else { SND.ctx.resume(); if (SND.bgmOn) startBgm(); } });
 
 // ───────────────────────── 엔진 ─────────────────────────
 class Engine {
@@ -803,6 +908,7 @@ function startTimer() {
   const tick = () => {
     const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
     el.textContent = left + '초'; el.classList.toggle('low', left <= 10);
+    if (left <= 5 && left > 0 && left !== tick.last) sfxTick(0.14, left <= 3 ? 1700 : 1300); tick.last = left;
     if (left <= 0) { stopTimer(); if (S.g === g && !g.over && g.turn === 'user') { toast('시간이 다 됐어요'); endGame(0, '시간패'); } }
   };
   tick(); timerH = setInterval(tick, 250);
@@ -824,14 +930,14 @@ GB.cv.addEventListener('click', e => {
   const [x, y] = GB.at(e.clientX, e.clientY);
   if (!inb(x, y)) return;
   if (g.moves.some(m => m[0] === x && m[1] === y)) return;
-  if (g.forbid && has(g.forbid, [x, y])) { toast('흑의 금수 자리예요 (3-3·4-4·장목)'); return; }
-  g.preview = [x, y]; redraw(); updatePlace();
+  if (g.forbid && has(g.forbid, [x, y])) { toast('흑의 금수 자리예요 (3-3·4-4·장목)'); sfxForbid(); return; }
+  g.preview = [x, y]; redraw(); updatePlace(); sfxTick(0.07, 1800);
 });
 $('btn-place').onclick = () => { const g = S.g; if (!g || !g.preview || g.turn !== 'user' || g.over) return; const [x, y] = g.preview; g.preview = null; userMove(x, y); };
 
 function userMove(x, y) {
   const g = S.g; const ply = g.moves.length; stopTimer();
-  g.moves.push([x, y]); setTurn('ai'); redraw();
+  g.moves.push([x, y]); setTurn('ai'); redraw(); sfxStone(true);
   g.recs.push({ ply, move: [x, y], before: g.pendingBefore, loss: null, ms: g.turnStart ? Date.now() - g.turnStart : null });
   const c = g.userBlack ? 1 : 2; const w = isWin(grid(g.moves), x, y, c);
   if (w) { g.winLine = w; const r = g.recs[g.recs.length - 1]; r.loss = 0; redraw(); return endGame(1, '5목'); }
@@ -861,7 +967,7 @@ async function aiTurn(first) {
   } catch (err) { console.error(err); status('AI 오류가 생겼습니다. 새로고침해 주세요.'); return; }
   if (g !== S.g || g.over) return;
   if (!move || g.moves.some(m => same(m, move))) move = randomNear(grid(g.moves));
-  g.moves.push(move); redraw();
+  g.moves.push(move); redraw(); sfxStone(false);
   const c = g.userBlack ? 2 : 1; const w = isWin(grid(g.moves), move[0], move[1], c);
   if (w) { g.winLine = w; redraw(); return endGame(0, '5목'); }
   if (g.moves.length >= N * N) return endGame(0.5, '무승부');
@@ -1231,6 +1337,7 @@ async function endGame(result, reason) {
   $('g-timer').classList.remove('low');
   status((result === 1 ? '<b>승리!</b>' : result === 0 ? `<b>패배</b>${reason === '시간패' ? ' (시간 초과)' : reason === '기권' ? ' (기권)' : ''}` : '<b>무승부</b>') + ' · 수를 분석하는 중', true);
   for (const r of g.recs) if (r.loss == null) { try { const b = r.before ? await r.before : null; r.wBest = b ? b.winrate : null; r.best = b ? b.move : null; r.pvBest = b ? b.pv : null; } catch (e) {} r.loss = 0; }
+  sfxResult(result);
   const A = analyzeGame(g); g.A = A; g.result = result; g.reason = reason;
   const sw = strengthsWeaknesses(A); g.sw = sw; g.hl = highlights(g);
   const rec = {
@@ -1483,6 +1590,7 @@ function setSubmitLink(a, label, after) {
 }
 
 if (AUTO_SUBMIT) flushQueue().then(renderHome);
+renderSoundButtons();
 renderHome();
 </script>
 </body>
